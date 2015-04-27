@@ -689,5 +689,26 @@ namespace jep
 		glDeleteBuffers(1, VBO.get());
 		glDeleteTextures(1, TEX.get());
 	}
+
+	void ogl_model_animated::draw(boost::shared_ptr<ogl_context> context, boost::shared_ptr<ogl_camera> camera)
+	{
+		int start_location_offset = animation_indices.at(current_animation).at(current_frame);
+		//TODO find way to identify how many frames/vertices belong to each animation
+		int frame_vertex_count = 0;
+		boost::shared_ptr<GLuint> temp_vao = getOGLData()->getVAO();
+		boost::shared_ptr<GLuint> temp_vbo = getOGLData()->getVBO();
+		boost::shared_ptr<GLuint> temp_tex = getOGLData()->getTEX();
+
+		glBindVertexArray(*temp_vao);
+		glBindTexture(GL_TEXTURE_2D, *temp_tex);
+
+		glm::mat4 MVP = context->getProjectionMatrix() * camera->getViewMatrix() * getModelMatrix();
+		glUniformMatrix4fv(context->getMVPID(), 1, GL_FALSE, &MVP[0][0]);
+		glDrawArrays(GL_TRIANGLES, start_location_offset, frame_vertex_count);
+
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		glBindVertexArray(0);
+	}
 }
 

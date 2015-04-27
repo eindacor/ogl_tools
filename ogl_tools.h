@@ -229,8 +229,55 @@ namespace jep
 	class ogl_model
 	{
 	public:
-		ogl_model();
+		ogl_model(boost::shared_ptr<ogl_data> ogld) { opengl_data = ogld; }
 		~ogl_model(){};
+
+		virtual void draw(){};
+		boost::shared_ptr<ogl_data> getOGLData() { return opengl_data; }
+		glm::mat4 getModelMatrix() const { return model_matrix; }
+
+	private:
+		boost::shared_ptr<ogl_data> opengl_data;
+		glm::mat4 model_matrix;
+	};
+
+	class ogl_model_static : public ogl_model
+	{
+	public: 
+		ogl_model_static(boost::shared_ptr<ogl_data> ogld) : ogl_model(ogld) {};
+		~ogl_model_static(){};
+
+		virtual void draw(boost::shared_ptr<ogl_context> context, boost::shared_ptr<ogl_camera> camera);
+
+	private:
+
+	};
+
+	class ogl_model_mobile : public ogl_model
+	{
+	public:
+		ogl_model_mobile(boost::shared_ptr<ogl_data> ogld) : ogl_model(ogld) {};
+		~ogl_model_mobile(){};
+
+		virtual void draw(boost::shared_ptr<ogl_context> context, boost::shared_ptr<ogl_camera> camera);
+
+	private:
+		glm::mat4 model_matrix;
+	};
+
+	class ogl_model_animated : public ogl_model
+	{
+	public:
+		ogl_model_animated(boost::shared_ptr<ogl_data> ogld) : ogl_model(ogld) {};
+		~ogl_model_animated(){};
+
+		virtual void draw(boost::shared_ptr<ogl_context> context, boost::shared_ptr<ogl_camera> camera);
+
+	private:
+		//first int is animation index, second is frame index, third is byte offset in opengl array
+		std::map<int, std::map<int, int> > animation_indices;
+		int current_animation;
+		int current_frame;
 	};
 
 	class ogl_scene
@@ -238,8 +285,6 @@ namespace jep
 	public:
 		ogl_scene(boost::shared_ptr<ogl_camera> cam, boost::shared_ptr<ogl_context> con);
 		~ogl_scene(){};
-
-
 
 	private:
 		boost::shared_ptr<ogl_camera> camera;
