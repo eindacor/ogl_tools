@@ -197,6 +197,55 @@ namespace jep
 		std::map<int, bool> keys;
 		boost::shared_ptr<ogl_context> context;
 	};
+
+	//class that handles VBO/VAO data for meshes that share a texture map
+	class ogl_data
+	{
+	public:
+		ogl_data(boost::shared_ptr<ogl_context> context,
+				const char* texture_path,
+				GLenum draw_type, 
+				std::vector<float> vec_vertices, 
+				int position_vec_size, 
+				int uv_vec_size, 
+				int stride, 
+				int offset);
+		~ogl_data();
+
+		const int getVertexCount() const { return vertex_count; }
+
+		boost::shared_ptr<GLuint> getVBO() const { return VBO; }
+		boost::shared_ptr<GLuint> getVAO() const { return VAO; }
+		boost::shared_ptr<GLuint> getTEX() const { return TEX; }
+
+	private:
+		boost::shared_ptr<GLuint> VBO;
+		boost::shared_ptr<GLuint> VAO;
+		boost::shared_ptr<GLuint> TEX;
+		int vertex_count;
+	};
+
+	//class that stores/renders multiple ogl_data objects
+	class ogl_model
+	{
+	public:
+		ogl_model();
+		~ogl_model(){};
+	};
+
+	class ogl_scene
+	{
+	public:
+		ogl_scene(boost::shared_ptr<ogl_camera> cam, boost::shared_ptr<ogl_context> con);
+		~ogl_scene(){};
+
+
+
+	private:
+		boost::shared_ptr<ogl_camera> camera;
+		boost::shared_ptr<ogl_context> context;
+		
+	};
 }
 
 #endif

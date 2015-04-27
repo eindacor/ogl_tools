@@ -640,4 +640,54 @@ namespace jep
 
 		setViewMatrix(view_matrix);
 	}
+
+	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
+					const char* texture_path, 
+					GLenum draw_type, 
+					std::vector<float> vec_vertices, 
+					int position_vec_size, 
+					int uv_vec_size, 
+					int stride, 
+					int offset)
+	{
+		//lines below are in leiu of proper shared_ptr instantiation
+		boost::shared_ptr<GLuint> temp_vbo(new GLuint);
+		boost::shared_ptr<GLuint> temp_vao(new GLuint);
+		boost::shared_ptr<GLuint> temp_tex(new GLuint);
+		VBO = temp_vbo;
+		VAO = temp_vao;
+		TEX = temp_tex;
+
+		vertex_count = vec_vertices.size();
+
+		glGenBuffers(1, VBO.get());
+		glBindBuffer(GL_ARRAY_BUFFER, *VBO);
+		glBufferData(GL_ARRAY_BUFFER, vec_vertices.size() * sizeof(float), &vec_vertices[0], draw_type);
+
+		glGenVertexArrays(1, VAO.get());
+		glBindVertexArray(*VAO);
+
+		jep::loadTexture(texture_path, *TEX);
+		GLuint texture_ID = glGetUniformLocation(context->getProgramID(), "myTextureSampler");
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, *TEX);
+		glUniform1i(texture_ID, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+		//if points passed were vec3's, size = 3
+		glVertexAttribPointer(0, position_vec_size, GL_FLOAT, GL_FALSE, stride, (void*)0);
+		glVertexAttribPointer(1, uv_vec_size, GL_FLOAT, GL_FALSE, stride, (void*)(offset));
+
+		glBindVertexArray(0);
+	}
+
+	ogl_data::~ogl_data()
+	{
+		glDeleteVertexArrays(1, VAO.get());
+		glDeleteBuffers(1, VBO.get());
+		glDeleteTextures(1, TEX.get());
+	}
 }
+
