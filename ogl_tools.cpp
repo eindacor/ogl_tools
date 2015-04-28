@@ -273,7 +273,7 @@ namespace jep
 
 		//create vertex buffer object, set clear color
 		if (errors == false)
-			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+			glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 	}
 
 	ogl_context::~ogl_context()
@@ -566,7 +566,7 @@ namespace jep
 		strafe_right = !strafe_left;
 	}
 
-	void ogl_camera_free::update()
+	void ogl_camera_free::updateCamera()
 	{
 		if (getKeys()->checkPress(GLFW_KEY_A) || getKeys()->checkPress(GLFW_KEY_D))
 		{
@@ -639,6 +639,22 @@ namespace jep
 			glm::vec3(0, 1, 0));
 
 		setViewMatrix(view_matrix);
+	}
+
+	bool key_handler::checkPress(int key)
+	{
+		int state = glfwGetKey(context->getWindow(), key);
+
+		keys[key] = (state == GLFW_PRESS);
+
+		return keys[key];
+
+		switch (state)
+		{
+		case GLFW_PRESS: return true;
+		case GLFW_RELEASE: return false;
+		default: return false;
+		}
 	}
 
 	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,

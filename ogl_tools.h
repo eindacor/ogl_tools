@@ -129,8 +129,8 @@ namespace jep
 		ogl_camera_free(boost::shared_ptr<key_handler> kh, glm::vec3 position) :
 			ogl_camera(kh, position, glm::vec3(position.x, position.y, position.z - 10.0f))
 		{
-			strafe_distance = .3f;
-			step_distance = .3f;
+			strafe_distance = .1f;
+			step_distance = .1f;
 			tilt_angle = 2.0f;
 			rotate_angle = 2.0f;
 
@@ -151,7 +151,7 @@ namespace jep
 
 		void printErrors();
 
-		virtual void update();
+		virtual void updateCamera();
 		void setPrintMovement(bool b) { print_movement = b; }
 
 		void stepCamera(float dist);
