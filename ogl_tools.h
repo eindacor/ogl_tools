@@ -50,6 +50,10 @@ namespace jep
 		const GLint getMVPID() const { return MVP_ID; }
 		const glm::mat4 getProjectionMatrix() const { return projection_matrix; }
 
+		const glm::vec4 getBackgroundColor() const { return background_color; }
+
+		void setBackgroundColor(glm::vec4 color) { glClearColor(color.x, color.y, color.z, color.w); background_color = color; }
+
 	private:
 		GLuint createShader(std::string file, GLenum type);
 		GLuint createProgram(std::string vert_file, std::string frag_file);

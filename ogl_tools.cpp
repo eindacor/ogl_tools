@@ -273,7 +273,10 @@ namespace jep
 
 		//create vertex buffer object, set clear color
 		if (errors == false)
-			glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+		{
+			background_color = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+			setBackgroundColor(background_color);
+		}
 	}
 
 	ogl_context::~ogl_context()
