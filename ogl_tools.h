@@ -48,9 +48,13 @@ namespace jep
 		const GLuint getTextureID() const { return program_ID; }
 		const GLint getColorID() const { return geometry_color_ID; }
 		const GLint getMVPID() const { return MVP_ID; }
-		const glm::mat4 getProjectionMatrix() const { return projection_matrix; }
-
+		const GLint getAbsoluteID() const { return absolute_ID; }
+		const GLint getModelID() const { return model_ID; }
+		const float getAspectRatio() const { return aspect_ratio; }
 		const glm::vec4 getBackgroundColor() const { return background_color; }
+
+		int getWindowHeight() const { return window_height; }
+		int getWindowWidth() const { return window_width; }
 
 		void setBackgroundColor(glm::vec4 color) { glClearColor(color.x, color.y, color.z, color.w); background_color = color; }
 
@@ -62,15 +66,19 @@ namespace jep
 		glm::vec4 background_color;
 		GLFWwindow* window;
 		bool errors = true;
+		int window_height, window_width;
 		std::string window_title;
 		std::vector<std::string> display_errors;
 
-		glm::mat4 projection_matrix;
-
+		//TODO modify these ID's so they are customizable
 		GLuint program_ID;
 		GLuint texture_ID;
 		GLint geometry_color_ID;
 		GLint MVP_ID;
+		GLint absolute_ID;
+		GLint model_ID;
+
+		float aspect_ratio;
 	};
 
 	//ogl_camera is a projection matrix manipulator, this is a base class, from which specific camera types should be derived
@@ -78,12 +86,13 @@ namespace jep
 	class ogl_camera
 	{
 	public:
-		ogl_camera(boost::shared_ptr<key_handler> kh, glm::vec3 position, glm::vec3 focus);
+		ogl_camera(const boost::shared_ptr<key_handler> &kh, const boost::shared_ptr<ogl_context> &context, glm::vec3 position, glm::vec3 focus, float fov);
 		~ogl_camera(){};
 
 		void setViewMatrix(const glm::mat4 &vm) { view_matrix = vm; }
 		const glm::mat4 getViewMatrix() const { return view_matrix; }
 		boost::shared_ptr<key_handler> getKeys() { return keys; }
+		const glm::mat4 getProjectionMatrix() const { return projection_matrix; }
 
 		const glm::vec3 getFocus() const { return camera_focus; }
 		const glm::vec3 getPosition() const { return camera_position; }
@@ -97,6 +106,7 @@ namespace jep
 		glm::mat4 view_matrix;
 		glm::mat4 projection_matrix;
 		boost::shared_ptr<key_handler> keys;
+		float aspect_scale;
 
 		glm::vec3 camera_focus;
 		glm::vec3 camera_position;
@@ -130,8 +140,8 @@ namespace jep
 	class ogl_camera_free : public ogl_camera
 	{
 	public:
-		ogl_camera_free(boost::shared_ptr<key_handler> kh, glm::vec3 position) :
-			ogl_camera(kh, position, glm::vec3(position.x, position.y, position.z - 10.0f))
+		ogl_camera_free(const boost::shared_ptr<key_handler> &kh, const boost::shared_ptr<ogl_context> &context, glm::vec3 position, float fov) :
+			ogl_camera(kh, context, position, glm::vec3(position.x, position.y, position.z - 10.0f), fov)
 		{
 			strafe_distance = .1f;
 			step_distance = .1f;
@@ -152,6 +162,67 @@ namespace jep
 		}
 
 		~ogl_camera_free(){};
+
+		void printErrors();
+
+		virtual void updateCamera();
+		void setPrintMovement(bool b) { print_movement = b; }
+
+		void stepCamera(float dist);
+		void strafeCamera(float dist);
+		void rotateCamera(float degrees);
+		void tiltCamera(float degrees);
+
+		float camera_tilt;
+		float camera_rotation;
+
+		void move(signed short n);
+		void rotate(signed short n);
+		void tilt(signed short n);
+		void strafe(signed short n);
+
+	private:
+		float strafe_distance;
+		float step_distance;
+		float tilt_angle;
+		float rotate_angle;
+
+		bool move_forward;
+		bool move_backward;
+		bool rotate_left;
+		bool rotate_right;
+		bool tilt_up;
+		bool tilt_down;
+		bool strafe_left;
+		bool strafe_right;
+		bool print_movement;
+	};
+
+	class ogl_camera_iso : public ogl_camera
+	{
+	public:
+		ogl_camera_iso(const boost::shared_ptr<key_handler> &kh, const boost::shared_ptr<ogl_context> &context, glm::vec3 position, float fov) :
+			ogl_camera(kh, context, position, glm::vec3(position.x, position.y, position.z - 10.0f), fov)
+		{
+			strafe_distance = .1f;
+			step_distance = .1f;
+			tilt_angle = 2.0f;
+			rotate_angle = 2.0f;
+
+			camera_tilt = 0.0f;
+			camera_rotation = 0.0f;
+
+			move_forward = false;
+			move_backward = false;
+			rotate_left = false;
+			rotate_right = false;
+			tilt_up = false;
+			tilt_down = false;
+			strafe_left = false;
+			strafe_right = false;
+		}
+
+		~ogl_camera_iso(){};
 
 		void printErrors();
 
