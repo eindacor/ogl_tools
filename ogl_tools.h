@@ -91,7 +91,7 @@ namespace jep
 		void setFocus(glm::vec3 focus) { camera_focus = focus; }
 		void setPosition(glm::vec3 position) { camera_position = position; }
 
-		virtual void updateCamera() {};
+		virtual void updateCamera();
 
 	private:
 		glm::mat4 view_matrix;

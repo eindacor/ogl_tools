@@ -390,6 +390,16 @@ namespace jep
 			glm::vec3(0, 1, 0));								//up axis
 	}
 
+	void ogl_camera::updateCamera()
+	{
+		glm::mat4 view_matrix = glm::lookAt(
+			glm::vec3(getPosition().x, getPosition().y, getPosition().z),	//position of camera
+			glm::vec3(getFocus().x, getFocus().y, getFocus().z),		//position of focal point
+			glm::vec3(0, 1, 0));
+
+		setViewMatrix(view_matrix);
+	};
+
 	/*
 	void ogl_camera_rigged::update()
 	{
