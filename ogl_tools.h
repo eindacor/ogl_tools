@@ -259,7 +259,7 @@ namespace jep
 		key_handler(boost::shared_ptr<ogl_context> ch) { context = ch; }
 		~key_handler(){};
 
-		bool checkPress(int key);
+		bool checkPress(int key, bool hold=true);
 
 	private:
 		std::map<int, bool> keys;

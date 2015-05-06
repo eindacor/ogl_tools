@@ -218,7 +218,7 @@ namespace jep
 	{
 		window_width = width;
 		window_height = height;
-		aspect_ratio = window_width / window_height;
+		aspect_ratio = (float)window_width / (float)window_height;
 		errors = false;
 		window_title = title;
 
@@ -666,9 +666,35 @@ namespace jep
 		setViewMatrix(view_matrix);
 	}
 
-	bool key_handler::checkPress(int key)
+	bool key_handler::checkPress(int key, bool include_held)
 	{
+		if (keys.find(key) == keys.end())
+			keys[key] = GLFW_RELEASE;
+
 		int state = glfwGetKey(context->getWindow(), key);
+
+		bool first_press = (keys[key] == GLFW_RELEASE && state == GLFW_PRESS);
+		bool was_held = (keys[key] == GLFW_PRESS && state == GLFW_PRESS);
+
+		keys[key] = state;
+
+		switch (include_held)
+		{
+		case true: return (state == GLFW_PRESS);
+		case false: return (state == GLFW_PRESS && first_press);
+		}
+
+
+		/*
+		if (!include_held)
+		{
+			if (keys.find(key) == keys.end())
+				keys[key] = GLFW_RELEASE;
+
+			bool was_held = (keys[key] == GLFW_PRESS && state == GLFW_PRESS);
+			keys[key] = state;
+			return was_held;
+		}
 
 		keys[key] = (state == GLFW_PRESS);
 
@@ -680,6 +706,8 @@ namespace jep
 		case GLFW_RELEASE: return false;
 		default: return false;
 		}
+
+		*/
 	}
 
 	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
