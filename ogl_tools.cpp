@@ -267,6 +267,9 @@ namespace jep
 		texture_ID = glGetUniformLocation(program_ID, "myTextureSampler");
 		absolute_ID = glGetUniformLocation(program_ID, "absolute_position");
 		model_ID = glGetUniformLocation(program_ID, "model_matrix");
+		aspect_ID = glGetUniformLocation(program_ID, "aspect_scale");
+
+		glUniform1f(aspect_ID, aspect_ratio);
 
 		//z-buffer functions, prevent close objects being clipped by far objects
 		glEnable(GL_DEPTH_TEST);

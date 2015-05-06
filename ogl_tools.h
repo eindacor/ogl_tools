@@ -50,6 +50,7 @@ namespace jep
 		const GLint getMVPID() const { return MVP_ID; }
 		const GLint getAbsoluteID() const { return absolute_ID; }
 		const GLint getModelID() const { return model_ID; }
+		const GLint getAspectID() const { return aspect_ID; }
 		const float getAspectRatio() const { return aspect_ratio; }
 		const glm::vec4 getBackgroundColor() const { return background_color; }
 
@@ -77,6 +78,7 @@ namespace jep
 		GLint MVP_ID;
 		GLint absolute_ID;
 		GLint model_ID;
+		GLint aspect_ID;
 
 		float aspect_ratio;
 	};
