@@ -45,17 +45,13 @@ namespace jep
 		void swapBuffers() const { glfwSwapBuffers(window); }
 
 		const GLuint getProgramID() const { return program_ID; }
-		const GLuint getTextureID() const { return program_ID; }
-		const GLint getColorID() const { return geometry_color_ID; }
-		const GLint getMVPID() const { return MVP_ID; }
-		const GLint getAbsoluteID() const { return absolute_ID; }
-		const GLint getModelID() const { return model_ID; }
-		const GLint getAspectID() const { return aspect_ID; }
 		const float getAspectRatio() const { return aspect_ratio; }
 		const glm::vec4 getBackgroundColor() const { return background_color; }
 
 		int getWindowHeight() const { return window_height; }
 		int getWindowWidth() const { return window_width; }
+
+		GLint ogl_context::getShaderGLint(GLchar* name);
 
 		void setBackgroundColor(glm::vec4 color) { glClearColor(color.x, color.y, color.z, color.w); background_color = color; }
 
@@ -71,14 +67,9 @@ namespace jep
 		std::string window_title;
 		std::vector<std::string> display_errors;
 
-		//TODO modify these ID's so they are customizable
+		std::map<GLchar*, boost::shared_ptr<GLint> > glint_map;
+
 		GLuint program_ID;
-		GLuint texture_ID;
-		GLint geometry_color_ID;
-		GLint MVP_ID;
-		GLint absolute_ID;
-		GLint model_ID;
-		GLint aspect_ID;
 
 		float aspect_ratio;
 	};

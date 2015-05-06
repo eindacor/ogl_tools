@@ -261,15 +261,7 @@ namespace jep
 		}
 
 		//TODO make values of each ID variable
-		program_ID = createProgram(vert_file, frag_file);
-		geometry_color_ID = glGetUniformLocation(program_ID, "geometry_color");
-		MVP_ID = glGetUniformLocation(program_ID, "MVP");
-		texture_ID = glGetUniformLocation(program_ID, "myTextureSampler");
-		absolute_ID = glGetUniformLocation(program_ID, "absolute_position");
-		model_ID = glGetUniformLocation(program_ID, "model_matrix");
-		aspect_ID = glGetUniformLocation(program_ID, "aspect_scale");
-
-		glUniform1f(aspect_ID, aspect_ratio);
+		program_ID = createProgram(vert_file, frag_file);	
 
 		//z-buffer functions, prevent close objects being clipped by far objects
 		glEnable(GL_DEPTH_TEST);
@@ -382,6 +374,17 @@ namespace jep
 		glDetachShader(program_ID, vertex_shader_ID);
 
 		return program_ID;
+	}
+
+	GLint ogl_context::getShaderGLint(GLchar* name)
+	{
+		if (glint_map.find(name) == glint_map.end())
+		{
+			boost::shared_ptr<GLint> GLintID(new GLint(glGetUniformLocation(program_ID, name)));
+			glint_map.insert(std::pair<GLchar*, boost::shared_ptr<GLint> >(name, GLintID));		
+		}
+
+		return *(glint_map.at(name));
 	}
 
 	ogl_camera::ogl_camera(const boost::shared_ptr<key_handler> &kh, const boost::shared_ptr<ogl_context> &context, glm::vec3 position, glm::vec3 focus, float fov)
@@ -741,7 +744,7 @@ namespace jep
 		glBindTexture(GL_TEXTURE_2D, *temp_tex);
 
 		glm::mat4 MVP = camera->getProjectionMatrix() * camera->getViewMatrix() * getModelMatrix();
-		glUniformMatrix4fv(context->getMVPID(), 1, GL_FALSE, &MVP[0][0]);
+		glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
 		glDrawArrays(GL_TRIANGLES, start_location_offset, frame_vertex_count);
 
 		glBindTexture(GL_TEXTURE_2D, 0);
