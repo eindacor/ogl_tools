@@ -685,31 +685,25 @@ namespace jep
 		case true: return (state == GLFW_PRESS);
 		case false: return (state == GLFW_PRESS && first_press);
 		}
+	}
 
+	void key_handler::updateCursorPosition()
+	{
+		//glfw considers upper-left corner to be 0,0, and lower-right corner to be window width, window height
+		//openGL considers upper-left to be -1.0, 1.0 and lower-right corner to be 1.0, -1.0
+		double x_position;
+		double y_position;
+		glfwGetCursorPos(context->getWindow(), &x_position, &y_position);
 
-		/*
-		if (!include_held)
-		{
-			if (keys.find(key) == keys.end())
-				keys[key] = GLFW_RELEASE;
+		double window_height = (double)context->getWindowHeight();
+		double window_width = (double)context->getWindowWidth();
 
-			bool was_held = (keys[key] == GLFW_PRESS && state == GLFW_PRESS);
-			keys[key] = state;
-			return was_held;
-		}
+		double center_y = window_height / 2.0f;
+		double center_x = window_width / 2.0f;
 
-		keys[key] = (state == GLFW_PRESS);
-
-		return keys[key];
-
-		switch (state)
-		{
-		case GLFW_PRESS: return true;
-		case GLFW_RELEASE: return false;
-		default: return false;
-		}
-
-		*/
+		y_window_position = (center_y - y_position) / center_y;
+		//reverse x dimension
+		x_window_position = (center_x - x_position) / center_x * -1.0f;
 	}
 
 	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
@@ -739,7 +733,8 @@ namespace jep
 		glBindVertexArray(*VAO);
 
 		jep::loadTexture(texture_path, *TEX);
-		GLuint texture_ID = glGetUniformLocation(context->getProgramID(), "myTextureSampler");
+		//TODO make the name of the texture hanlder variable
+		GLuint texture_ID = context->getShaderGLint("myTextureSampler");
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, *TEX);
 		glUniform1i(texture_ID, 0);
