@@ -687,6 +687,25 @@ namespace jep
 		}
 	}
 
+	bool key_handler::checkMouse(int key, bool include_held)
+	{
+		if (mouse.find(key) == mouse.end())
+			mouse[key] = GLFW_RELEASE;
+
+		int state = glfwGetMouseButton(context->getWindow(), key);
+
+		bool first_press = (mouse[key] == GLFW_RELEASE && state == GLFW_PRESS);
+		bool was_held = (mouse[key] == GLFW_PRESS && state == GLFW_PRESS);
+
+		mouse[key] = state;
+
+		switch (include_held)
+		{
+		case true: return (state == GLFW_PRESS);
+		case false: return (state == GLFW_PRESS && first_press);
+		}
+	}
+
 	void key_handler::updateCursorPosition()
 	{
 		//glfw considers upper-left corner to be 0,0, and lower-right corner to be window width, window height

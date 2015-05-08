@@ -259,7 +259,8 @@ namespace jep
 		key_handler(boost::shared_ptr<ogl_context> ch) { context = ch; }
 		~key_handler(){};
 
-		bool checkPress(int key, bool hold=true);
+		bool checkPress(int key, bool hold = true);
+		bool checkMouse(int key, bool hold = true);
 		glm::vec2 getCursorPosition() { 
 			updateCursorPosition(); return glm::vec2(x_window_position, y_window_position); }
 
@@ -268,6 +269,7 @@ namespace jep
 		double x_window_position;
 		double y_window_position;
 		std::map<int, bool> keys;
+		std::map<int, bool> mouse;
 		boost::shared_ptr<ogl_context> context;
 	};
 
