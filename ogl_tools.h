@@ -370,10 +370,22 @@ namespace jep
 	class static_text
 	{
 	public:
-		static_text(std::string s, const boost::shared_ptr<ogl_context> &camera, const char* text_image_path);
-		~static_text();
+		static_text(std::string s, const boost::shared_ptr<ogl_context> &context, const char* text_image_path,
+			glm::vec4 color, glm::vec4 trans_color, bool transparent, glm::vec2 upper_left_position, float scale);
+		~static_text(){};
+
+		void draw(const boost::shared_ptr<ogl_camera> &camera,
+			const boost::shared_ptr<ogl_context> &context, GLchar* text_shader_ID, GLchar* text_color_shader_ID,
+			GLchar* transparent_color_shader_ID);
+
 	private:
-		std::vector< boost::shared_ptr<ogl_data> > character_data_vec;
+		boost::shared_ptr<ogl_data> opengl_data;
+		glm::vec4 text_color;
+		glm::vec4 transparency_color;
+		bool transparent_background;
+
+		int line_count;
+		int character_count;
 	};
 }
 

@@ -734,13 +734,9 @@ namespace jep
 					int stride, 
 					int offset)
 	{
-		//lines below are in leiu of proper shared_ptr instantiation
-		boost::shared_ptr<GLuint> temp_vbo(new GLuint);
-		boost::shared_ptr<GLuint> temp_vao(new GLuint);
-		boost::shared_ptr<GLuint> temp_tex(new GLuint);
-		VBO = temp_vbo;
-		VAO = temp_vao;
-		TEX = temp_tex;
+		VAO = boost::shared_ptr<GLuint>(new GLuint);
+		VBO = boost::shared_ptr<GLuint>(new GLuint);
+		TEX = boost::shared_ptr<GLuint>(new GLuint);
 
 		vertex_count = vec_vertices.size();
 
@@ -796,34 +792,56 @@ namespace jep
 		glBindVertexArray(0);
 	}
 
-	static_text::static_text(std::string s, const boost::shared_ptr<ogl_context> &context, const char* text_image_path)
+	//TODO revise class so text surface objects are pre-loaded and referenced as necessary
+	static_text::static_text(std::string s, const boost::shared_ptr<ogl_context> &context, const char* text_image_path, 
+		glm::vec4 color, glm::vec4 trans_color, bool transparent, glm::vec2 upper_left_position, float scale)
 	{
+		text_color = color;
+		transparency_color = trans_color;
+		transparent_background = transparent;
+
 		//image file must be made as a 16 x 16 grid
 		float uv_step = 1.0f / 16.0f;
 
 		vector<float> vec_vertices;
-		character_data_vec.reserve(s.size());
+		vec_vertices.reserve(s.size() * 30);
 
 		//TODO modify so characters are offset by a specific spacing according to character
-		int character_count = 0;
-		int line_count = 0;
+		character_count = 0;
+		int line_character_count = 0;
+		line_count = 0;
+
 		for (auto i : s)
 		{
 			if (i == '\n')
 			{
 				line_count++;
-				character_count = 0;
+				line_character_count = 0;
 				continue;
 			}
 
+			int index;
+
+			if (i == ' ')
+				index = 0;
+			//TODO FIX TEXT IMAGE FILE AND CHANGE 33 to 32
 			//characters in the image file begin with space, which is ascii value 32
-			int index((int)i - 32);
+			else index = (int)i - 33;
+			cout << endl << "character: " << i << endl;
+			cout << "raw index: " << (int)i << endl;
+			cout << "modified index: " << index << endl;
 			
 			int u_index = index % 16;
 			int v_index = index / 16;
 
+			cout << "u_index: " << u_index << endl;
+			cout << "v_index: " << v_index << endl;
+
 			float u_offset = (float)u_index * uv_step;
 			float v_offset = (float)v_index * uv_step;
+
+			cout << "u_offset: " << u_offset << endl;
+			cout << "v_offset: " << v_offset << endl;
 
 			glm::vec2 uv_lower_left(u_offset, v_offset);
 			glm::vec2 uv_upper_left(u_offset, v_offset + uv_step);
@@ -832,14 +850,24 @@ namespace jep
 
 			float aspect_ratio = context->getAspectRatio();
 
-			float x_offset = (float)character_count;// *(1.0f / aspect_ratio); //aspect ratio might be needed if/when the text is projected to screen and not transformed with MVP
+			float x_offset = (float)line_character_count * (1.0f / aspect_ratio); //aspect ratio might be needed if/when the text is projected to screen and not transformed with MVP
 			float y_offset = (float)line_count * -1.0f;
 
-			glm::vec2 xy_lower_left(x_offset, y_offset);
-			glm::vec2 xy_upper_left(x_offset, y_offset + 1.0f);
-			glm::vec2 xy_upper_right(x_offset + 1.0f, y_offset + 1.0f);
-			glm::vec2 xy_lower_right(x_offset + 1.0f, y_offset);
+			glm::vec4 xy_lower_left(x_offset, y_offset - 1.0f, 0.0f, 1.0f);
+			glm::vec4 xy_upper_left(x_offset, y_offset, 0.0f, 1.0f);
+			glm::vec4 xy_upper_right(x_offset + (1.0f / aspect_ratio), y_offset, 0.0f, 1.0f);
+			glm::vec4 xy_lower_right(x_offset + (1.0f / aspect_ratio), y_offset - 1.0f, 0.0f, 1.0f);
 
+			glm::mat4 scale_matrix(glm::scale(glm::mat4(1.0f), glm::vec3(scale, scale, scale)));
+			glm::mat4 translation_matrix(glm::translate(glm::mat4(1.0f), glm::vec3(upper_left_position.x, upper_left_position.y, 0.0f)));
+			glm::mat4 position_matrix = translation_matrix * scale_matrix;
+
+			xy_lower_left = position_matrix * xy_lower_left;
+			xy_upper_left = position_matrix * xy_upper_left;
+			xy_upper_right = position_matrix * xy_upper_right;
+			xy_lower_right = position_matrix * xy_lower_right;
+
+			//TODO try to add all triangles to a single mesh instead of individual surfaces
 			vector<float> character_vertices{
 				xy_lower_left.x, xy_lower_left.y, 0.0f,
 				uv_lower_left.x, uv_lower_left.y,
@@ -855,18 +883,61 @@ namespace jep
 				uv_lower_right.x, uv_lower_right.y,
 			};
 
-			character_data_vec.push_back(boost::shared_ptr<jep::ogl_data>(
-				new jep::ogl_data(
-					context,
-					text_image_path, 
-					GL_STATIC_DRAW, 
-					vec_vertices, 
-					3,
-					2, 
-					5 * sizeof(float), 
-					3 * sizeof(float)
-					)));
+			vec_vertices.insert(vec_vertices.end(), character_vertices.begin(), character_vertices.end());
+
+			line_character_count++;
+			character_count++;
 		}
+
+		opengl_data = boost::shared_ptr<jep::ogl_data>(
+			new jep::ogl_data(
+			context,
+			text_image_path,
+			GL_STATIC_DRAW,
+			vec_vertices,
+			3,
+			2,
+			5 * sizeof(float),
+			3 * sizeof(float)
+			));
+	}
+
+	//TODO for draw functions, allow passing of a map of shader ID's with their corresponding values
+	//teemplatize if possible
+	void static_text::draw(const boost::shared_ptr<ogl_camera> &camera, 
+		const boost::shared_ptr<ogl_context> &context, GLchar* text_shader_ID, GLchar* text_color_shader_ID,
+		GLchar* transparent_color_shader_ID)
+	{
+		boost::shared_ptr<GLuint> temp_vao = opengl_data->getVAO();
+		boost::shared_ptr<GLuint> temp_vbo = opengl_data->getVBO();
+		boost::shared_ptr<GLuint> temp_tex = opengl_data->getTEX();
+
+		glBindVertexArray(*temp_vao);
+		glBindTexture(GL_TEXTURE_2D, *temp_tex);
+
+		//TODO try moving all of the "set" funcitons outside of the loop
+		//tell shader to activate text rendering
+		glUniform1i(context->getShaderGLint(text_shader_ID), true);
+
+		//set text color
+		glUniform4f(context->getShaderGLint(text_color_shader_ID), 
+			text_color.x, text_color.y, text_color.z, text_color.w);
+
+		//set transparent color
+		glUniform4f(context->getShaderGLint(transparent_color_shader_ID), 
+			transparency_color.x, transparency_color.y, transparency_color.z, transparency_color.w);
+			
+		//set mvp
+		glm::mat4 MVP = camera->getProjectionMatrix() * camera->getViewMatrix();		//if code is working properly, remove this line
+		MVP = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));				
+		glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
+
+		glDrawArrays(GL_TRIANGLES, 0, opengl_data->getVertexCount());
+
+		//disable text rendering
+		glUniform1i(context->getShaderGLint(text_shader_ID), false);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindVertexArray(0);
 	}
 }
 
