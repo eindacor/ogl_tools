@@ -792,56 +792,60 @@ namespace jep
 		glBindVertexArray(0);
 	}
 
-	//TODO revise class so text surface objects are pre-loaded and referenced as necessary
-	static_text::static_text(std::string s, const boost::shared_ptr<ogl_context> &context, const char* text_image_path, 
-		glm::vec4 color, glm::vec4 trans_color, bool transparent, glm::vec2 upper_left_position, float scale)
+	//TODO for draw functions, allow passing of a map of shader ID's with their corresponding values
+	//templatize if possible
+	void static_text::draw(const boost::shared_ptr<ogl_camera> &camera,
+		const boost::shared_ptr<ogl_context> &context, GLchar* text_shader_ID, GLchar* text_color_shader_ID,
+		GLchar* transparent_color_shader_ID)
 	{
-		text_color = color;
-		transparency_color = trans_color;
-		transparent_background = transparent;
+		int counter = 0;
+		for (auto i : character_array)
+		{
+			boost::shared_ptr<GLuint> temp_vao = i.first->getVAO();
+			boost::shared_ptr<GLuint> temp_vbo = i.first->getVBO();
+			boost::shared_ptr<GLuint> temp_tex = i.first->getTEX();
 
+			glBindVertexArray(*temp_vao);
+			glBindTexture(GL_TEXTURE_2D, *temp_tex);
+
+			//TODO try moving all of the "set" funcitons outside of the loop
+			//tell shader to activate text rendering
+			glUniform1i(context->getShaderGLint(text_shader_ID), true);
+
+			//set text color
+			glUniform4f(context->getShaderGLint(text_color_shader_ID),
+				text_color.x, text_color.y, text_color.z, text_color.w);
+
+			//set transparent color
+			glUniform4f(context->getShaderGLint(transparent_color_shader_ID),
+				transparency_color.x, transparency_color.y, transparency_color.z, transparency_color.w);
+
+			//set mvp
+			glm::mat4 character_translation_matrix = i.second;
+			glm::mat4 MVP = text_translation_matrix * text_scale_matrix * character_translation_matrix;
+			glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
+
+			glDrawArrays(GL_TRIANGLES, 0, i.first->getVertexCount());
+
+			//disable text rendering
+			glUniform1i(context->getShaderGLint(text_shader_ID), false);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			glBindVertexArray(0);
+		}
+	}
+
+	text_handler::text_handler(const boost::shared_ptr<ogl_context> &context, const char* text_image_path)
+	{
 		//image file must be made as a 16 x 16 grid
 		float uv_step = 1.0f / 16.0f;
 
-		vector<float> vec_vertices;
-		vec_vertices.reserve(s.size() * 30);
-
-		//TODO modify so characters are offset by a specific spacing according to character
-		character_count = 0;
-		int line_character_count = 0;
-		line_count = 0;
-
-		for (auto i : s)
+		for (int i = 0; i < 256; i++)
 		{
-			if (i == '\n')
-			{
-				line_count++;
-				line_character_count = 0;
-				continue;
-			}
-
-			int index;
-
-			if (i == ' ')
-				index = 0;
-			//TODO FIX TEXT IMAGE FILE AND CHANGE 33 to 32
-			//characters in the image file begin with space, which is ascii value 32
-			else index = (int)i - 33;
-			cout << endl << "character: " << i << endl;
-			cout << "raw index: " << (int)i << endl;
-			cout << "modified index: " << index << endl;
-			
-			int u_index = index % 16;
-			int v_index = index / 16;
-
-			cout << "u_index: " << u_index << endl;
-			cout << "v_index: " << v_index << endl;
+			int u_index = i % 16;
+			int v_index = i / 16;
 
 			float u_offset = (float)u_index * uv_step;
 			float v_offset = (float)v_index * uv_step;
-
-			cout << "u_offset: " << u_offset << endl;
-			cout << "v_offset: " << v_offset << endl;
 
 			glm::vec2 uv_lower_left(u_offset, v_offset);
 			glm::vec2 uv_upper_left(u_offset, v_offset + uv_step);
@@ -850,24 +854,13 @@ namespace jep
 
 			float aspect_ratio = context->getAspectRatio();
 
-			float x_offset = (float)line_character_count * (1.0f / aspect_ratio); //aspect ratio might be needed if/when the text is projected to screen and not transformed with MVP
-			float y_offset = (float)line_count * -1.0f;
+			float positive_x_offset = 1.0f / aspect_ratio;
 
-			glm::vec4 xy_lower_left(x_offset, y_offset - 1.0f, 0.0f, 1.0f);
-			glm::vec4 xy_upper_left(x_offset, y_offset, 0.0f, 1.0f);
-			glm::vec4 xy_upper_right(x_offset + (1.0f / aspect_ratio), y_offset, 0.0f, 1.0f);
-			glm::vec4 xy_lower_right(x_offset + (1.0f / aspect_ratio), y_offset - 1.0f, 0.0f, 1.0f);
+			glm::vec4 xy_lower_left(0.0f, -1.0f, 0.0f, 1.0f);
+			glm::vec4 xy_upper_left(0.0f, 0.0f, 0.0f, 1.0f);
+			glm::vec4 xy_upper_right(positive_x_offset, 0.0f, 0.0f, 1.0f);
+			glm::vec4 xy_lower_right(positive_x_offset, -1.0f, 0.0f, 1.0f);
 
-			glm::mat4 scale_matrix(glm::scale(glm::mat4(1.0f), glm::vec3(scale, scale, scale)));
-			glm::mat4 translation_matrix(glm::translate(glm::mat4(1.0f), glm::vec3(upper_left_position.x, upper_left_position.y, 0.0f)));
-			glm::mat4 position_matrix = translation_matrix * scale_matrix;
-
-			xy_lower_left = position_matrix * xy_lower_left;
-			xy_upper_left = position_matrix * xy_upper_left;
-			xy_upper_right = position_matrix * xy_upper_right;
-			xy_lower_right = position_matrix * xy_lower_right;
-
-			//TODO try to add all triangles to a single mesh instead of individual surfaces
 			vector<float> character_vertices{
 				xy_lower_left.x, xy_lower_left.y, 0.0f,
 				uv_lower_left.x, uv_lower_left.y,
@@ -883,61 +876,64 @@ namespace jep
 				uv_lower_right.x, uv_lower_right.y,
 			};
 
-			vec_vertices.insert(vec_vertices.end(), character_vertices.begin(), character_vertices.end());
+			boost::shared_ptr<ogl_data> opengl_data(
+				new jep::ogl_data(
+				context,
+				text_image_path,
+				GL_STATIC_DRAW,
+				character_vertices,
+				3,
+				2,
+				5 * sizeof(float),
+				3 * sizeof(float)
+				));
 
-			line_character_count++;
-			character_count++;
+			characters.insert(std::pair<int, boost::shared_ptr<ogl_data> >(i, opengl_data));
 		}
-
-		opengl_data = boost::shared_ptr<jep::ogl_data>(
-			new jep::ogl_data(
-			context,
-			text_image_path,
-			GL_STATIC_DRAW,
-			vec_vertices,
-			3,
-			2,
-			5 * sizeof(float),
-			3 * sizeof(float)
-			));
 	}
 
-	//TODO for draw functions, allow passing of a map of shader ID's with their corresponding values
-	//teemplatize if possible
-	void static_text::draw(const boost::shared_ptr<ogl_camera> &camera, 
-		const boost::shared_ptr<ogl_context> &context, GLchar* text_shader_ID, GLchar* text_color_shader_ID,
-		GLchar* transparent_color_shader_ID)
+	boost::shared_ptr<static_text> text_handler::getTextArray(std::string s, const boost::shared_ptr<ogl_context> &context, 
+		bool italics, glm::vec4 color, glm::vec4 trans_color, bool transparent, glm::vec2 position, float scale)
 	{
-		boost::shared_ptr<GLuint> temp_vao = opengl_data->getVAO();
-		boost::shared_ptr<GLuint> temp_vbo = opengl_data->getVBO();
-		boost::shared_ptr<GLuint> temp_tex = opengl_data->getTEX();
+		std::vector< std::pair<boost::shared_ptr<ogl_data>, glm::mat4> > character_array;
+		character_array.reserve(s.size());
 
-		glBindVertexArray(*temp_vao);
-		glBindTexture(GL_TEXTURE_2D, *temp_tex);
+		//TODO modify so characters are offset by a specific spacing according to character
+		int line_character_count = 0;
+		int line_count = 0;
 
-		//TODO try moving all of the "set" funcitons outside of the loop
-		//tell shader to activate text rendering
-		glUniform1i(context->getShaderGLint(text_shader_ID), true);
+		for (auto i : s)
+		{
+			if (i == '\n')
+			{
+				line_count++;
+				line_character_count = 0;
+				continue;
+			}
 
-		//set text color
-		glUniform4f(context->getShaderGLint(text_color_shader_ID), 
-			text_color.x, text_color.y, text_color.z, text_color.w);
+			int index = 0;
 
-		//set transparent color
-		glUniform4f(context->getShaderGLint(transparent_color_shader_ID), 
-			transparency_color.x, transparency_color.y, transparency_color.z, transparency_color.w);
-			
-		//set mvp
-		glm::mat4 MVP = camera->getProjectionMatrix() * camera->getViewMatrix();		//if code is working properly, remove this line
-		MVP = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));				
-		glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
+			if (i == ' ')
+				index = 0;
 
-		glDrawArrays(GL_TRIANGLES, 0, opengl_data->getVertexCount());
+			else index = (int)i - 32;
 
-		//disable text rendering
-		glUniform1i(context->getShaderGLint(text_shader_ID), false);
-		glBindTexture(GL_TEXTURE_2D, 0);
-		glBindVertexArray(0);
+			if (italics)
+				index += 96;
+
+			float aspect_ratio = context->getAspectRatio();
+
+			float x_offset = (float)line_character_count * (1.0f / aspect_ratio); //aspect ratio might be needed if/when the text is projected to screen and not transformed with MVP
+			float y_offset = (float)line_count * -1.0f;
+
+			glm::mat4 translation_matrix(glm::translate(glm::mat4(1.0f), glm::vec3(x_offset, y_offset, 0.0f)));
+			//glm::mat4 translation_matrix(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f)));
+			character_array.push_back(std::pair<boost::shared_ptr<ogl_data>, glm::mat4>(characters.at(index), translation_matrix));
+			line_character_count++;
+		}
+
+		boost::shared_ptr<static_text> text_object(new static_text(character_array, color, trans_color, transparent, position, scale));
+		return text_object;
 	}
 }
 

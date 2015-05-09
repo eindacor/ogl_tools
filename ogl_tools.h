@@ -370,8 +370,16 @@ namespace jep
 	class static_text
 	{
 	public:
-		static_text(std::string s, const boost::shared_ptr<ogl_context> &context, const char* text_image_path,
-			glm::vec4 color, glm::vec4 trans_color, bool transparent, glm::vec2 upper_left_position, float scale);
+		static_text(std::vector< std::pair<boost::shared_ptr<ogl_data>, glm::mat4> > &char_array, 
+			glm::vec4 color, glm::vec4 trans_color, bool transparent, glm::vec2 position, float scale) : character_array(char_array) 
+		{
+			text_color = color;
+			transparency_color = trans_color;
+			transparent_background = transparent;
+			text_scale_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(scale, scale, scale));
+			text_translation_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(position.x, position.y, 0.0f));
+		};
+
 		~static_text(){};
 
 		void draw(const boost::shared_ptr<ogl_camera> &camera,
@@ -379,14 +387,32 @@ namespace jep
 			GLchar* transparent_color_shader_ID);
 
 	private:
-		boost::shared_ptr<ogl_data> opengl_data;
 		glm::vec4 text_color;
 		glm::vec4 transparency_color;
+		glm::mat4 text_scale_matrix;
 		bool transparent_background;
+		glm::mat4 text_translation_matrix;
+	
+		std::vector< std::pair<boost::shared_ptr<ogl_data>, glm::mat4> > character_array;
 
 		int line_count;
 		int character_count;
 	};
+
+	class text_handler
+	{
+	public:
+		text_handler(const boost::shared_ptr<ogl_context> &context, const char* text_image_path);
+		~text_handler(){};
+
+		boost::shared_ptr<static_text> getTextArray(std::string s, const boost::shared_ptr<ogl_context> &context, 
+			bool italics, glm::vec4 color, glm::vec4 trans_color, bool transparent, glm::vec2 position, float scale);
+
+	private:
+		map<int, boost::shared_ptr<ogl_data> > characters;
+	};
+
+	
 }
 
 #endif
