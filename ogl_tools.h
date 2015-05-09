@@ -366,6 +366,15 @@ namespace jep
 		boost::shared_ptr<ogl_context> context;
 		
 	};
+
+	class static_text
+	{
+	public:
+		static_text(std::string s, const boost::shared_ptr<ogl_context> &camera, const char* text_image_path);
+		~static_text();
+	private:
+		std::vector< boost::shared_ptr<ogl_data> > character_data_vec;
+	};
 }
 
 #endif

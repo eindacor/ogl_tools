@@ -795,5 +795,78 @@ namespace jep
 
 		glBindVertexArray(0);
 	}
+
+	static_text::static_text(std::string s, const boost::shared_ptr<ogl_context> &context, const char* text_image_path)
+	{
+		//image file must be made as a 16 x 16 grid
+		float uv_step = 1.0f / 16.0f;
+
+		vector<float> vec_vertices;
+		character_data_vec.reserve(s.size());
+
+		//TODO modify so characters are offset by a specific spacing according to character
+		int character_count = 0;
+		int line_count = 0;
+		for (auto i : s)
+		{
+			if (i == '\n')
+			{
+				line_count++;
+				character_count = 0;
+				continue;
+			}
+
+			//characters in the image file begin with space, which is ascii value 32
+			int index((int)i - 32);
+			
+			int u_index = index % 16;
+			int v_index = index / 16;
+
+			float u_offset = (float)u_index * uv_step;
+			float v_offset = (float)v_index * uv_step;
+
+			glm::vec2 uv_lower_left(u_offset, v_offset);
+			glm::vec2 uv_upper_left(u_offset, v_offset + uv_step);
+			glm::vec2 uv_upper_right(u_offset + uv_step, v_offset + uv_step);
+			glm::vec2 uv_lower_right(u_offset + uv_step, v_offset);
+
+			float aspect_ratio = context->getAspectRatio();
+
+			float x_offset = (float)character_count;// *(1.0f / aspect_ratio); //aspect ratio might be needed if/when the text is projected to screen and not transformed with MVP
+			float y_offset = (float)line_count * -1.0f;
+
+			glm::vec2 xy_lower_left(x_offset, y_offset);
+			glm::vec2 xy_upper_left(x_offset, y_offset + 1.0f);
+			glm::vec2 xy_upper_right(x_offset + 1.0f, y_offset + 1.0f);
+			glm::vec2 xy_lower_right(x_offset + 1.0f, y_offset);
+
+			vector<float> character_vertices{
+				xy_lower_left.x, xy_lower_left.y, 0.0f,
+				uv_lower_left.x, uv_lower_left.y,
+				xy_upper_left.x, xy_upper_left.y, 0.0f,
+				uv_upper_left.x, uv_upper_left.y,
+				xy_upper_right.x, xy_upper_right.y, 0.0f,
+				uv_upper_right.x, uv_upper_right.y,
+				xy_lower_left.x, xy_lower_left.y, 0.0f,
+				uv_lower_left.x, uv_lower_left.y,
+				xy_upper_right.x, xy_upper_right.y, 0.0f,
+				uv_upper_right.x, uv_upper_right.y,
+				xy_lower_right.x, xy_lower_right.y, 0.0f,
+				uv_lower_right.x, uv_lower_right.y,
+			};
+
+			character_data_vec.push_back(boost::shared_ptr<jep::ogl_data>(
+				new jep::ogl_data(
+					context,
+					text_image_path, 
+					GL_STATIC_DRAW, 
+					vec_vertices, 
+					3,
+					2, 
+					5 * sizeof(float), 
+					3 * sizeof(float)
+					)));
+		}
+	}
 }
 
