@@ -869,6 +869,27 @@ namespace jep
 		glUniform1i(context->getShaderGLint(text_shader_ID), false);
 	}
 
+	glm::vec2 static_text::getLowerRight() const
+	{
+		float x_position(x_bound ? upper_left.x + box_width : lower_right.x);
+		float y_position(y_bound ? upper_left.y - box_height : lower_right.y);
+		return glm::vec2(x_position, y_position);
+	}
+
+	glm::vec2 static_text::getLowerLeft() const
+	{
+		float x_position(upper_left.x);
+		float y_position(y_bound ? upper_left.y - box_height : lower_right.y);
+		return glm::vec2(x_position, y_position);
+	}
+
+	glm::vec2 static_text::getUpperRight() const
+	{
+		float x_position(x_bound ? upper_left.x + box_width : lower_right.x);
+		float y_position(upper_left.y);
+		return glm::vec2(x_position, y_position);
+	}
+
 	text_handler::text_handler(const boost::shared_ptr<ogl_context> &context, const char* text_image_path)
 	{
 		//image file must be made as a 16 x 16 grid
@@ -924,23 +945,38 @@ namespace jep
 	}
 
 	boost::shared_ptr<static_text> text_handler::getTextArray(std::string s, const boost::shared_ptr<ogl_context> &context, 
-		bool italics, glm::vec4 color, glm::vec4 trans_color, bool transparent, glm::vec2 position, float scale)
+		bool italics, glm::vec4 color, glm::vec4 trans_color, bool transparent, glm::vec2 position, float scale, float box_width, float box_height)
 	{
+		float actual_max_width = (box_width / scale) * context->getAspectRatio();
+		int max_line_length(actual_max_width);
+
+		bool x_bound(box_width > 0);
+		bool y_bound(box_height > 0);
+
 		std::vector< std::pair<boost::shared_ptr<ogl_data>, glm::mat4> > character_array;
 		character_array.reserve(s.size());
 
 		//TODO modify so characters are offset by a specific spacing according to character
-		int line_character_count = 0;
-		int line_count = 0;
+		int line_character_index = 0;
+		int line_index = 0;
+		int longest_line = 0;
+
+		float total_width = 0;
+		float total_height = 0;
 		
 		for (auto i : s)
 		{
-			if (i == '\n')
+			if (i == '\n' || (x_bound && line_character_index >= max_line_length))
 			{
-				line_count++;
-				line_character_count = 0;
-				continue;
+				line_index++;
+				line_character_index = 0;
+
+				if (i == '\n')
+					continue;
 			}
+
+			if (y_bound && line_index >= (int)box_height)
+				break;
 
 			int index = 0;
 
@@ -952,15 +988,24 @@ namespace jep
 			if (italics)
 				index += 96;
 
-			float x_offset = (float)line_character_count * 0.5f; 
-			float y_offset = (float)line_count * -1.0f;
+			float x_offset = (float)line_character_index * 0.5f;
+			float y_offset = (float)line_index * -1.0f;
 
 			glm::mat4 translation_matrix(glm::translate(glm::mat4(1.0f), glm::vec3(x_offset, y_offset, 0.0f)));
 			character_array.push_back(std::pair<boost::shared_ptr<ogl_data>, glm::mat4>(characters.at(index), translation_matrix));
-			line_character_count++;
+
+			if (line_character_index >= longest_line)
+				longest_line = line_character_index + 1;
+			line_character_index++;
 		}
 		
-		boost::shared_ptr<static_text> text_object(new static_text(character_array, color, trans_color, transparent, position, scale));
+		float actual_width = ((float)longest_line * scale) * context->getAspectRatio();
+		float actual_height = ((float)line_index + 1.0f) * scale;
+
+		glm::vec2 lower_right(position.x + actual_width, position.y - actual_height);
+
+		boost::shared_ptr<static_text> text_object(new static_text(character_array, color, trans_color, 
+			transparent, position, lower_right, scale, box_width, box_height));
 		return text_object;
 	}
 }

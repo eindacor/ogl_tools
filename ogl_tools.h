@@ -376,14 +376,21 @@ namespace jep
 	class static_text
 	{
 	public:
-		static_text(std::vector< std::pair<boost::shared_ptr<ogl_data>, glm::mat4> > &char_array, 
-			glm::vec4 color, glm::vec4 trans_color, bool transparent, glm::vec2 position, float scale) : character_array(char_array) 
+		static_text(const std::vector< std::pair<boost::shared_ptr<ogl_data>, glm::mat4> > &char_array,
+			const glm::vec4 &color, const glm::vec4 &trans_color, bool transparent, const glm::vec2 &upper_left_position,
+			const glm::vec2 &lower_right_position, float scale, float box_x = -1.0f, float box_y = -1.0f) : character_array(char_array)
 		{
 			text_color = color;
 			transparency_color = trans_color;
 			transparent_background = transparent;
 			text_scale_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(scale, scale, scale));
-			text_translation_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(position.x, position.y, 0.0f));
+			text_translation_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(upper_left_position.x, upper_left_position.y, 0.0f));
+			upper_left = upper_left_position;
+			lower_right = lower_right_position;
+			x_bound = (box_x > 0.0f);
+			y_bound = (box_y > 0.0f);
+			box_width = box_x;
+			box_height = box_y;
 		};
 
 		~static_text(){};
@@ -392,12 +399,22 @@ namespace jep
 			const boost::shared_ptr<ogl_context> &context, GLchar* text_shader_ID, GLchar* text_color_shader_ID,
 			GLchar* transparent_color_shader_ID);
 
+		glm::vec2 getUpperLeft() const { return upper_left; }
+		glm::vec2 getLowerRight() const;
+		glm::vec2 getLowerLeft() const;
+		glm::vec2 getUpperRight() const;
+
 	private:
 		glm::vec4 text_color;
 		glm::vec4 transparency_color;
 		glm::mat4 text_scale_matrix;
 		bool transparent_background;
 		glm::mat4 text_translation_matrix;
+
+		glm::vec2 upper_left, lower_right;
+
+		bool x_bound, y_bound;
+		float box_width, box_height;
 	
 		std::vector< std::pair<boost::shared_ptr<ogl_data>, glm::mat4> > character_array;
 
@@ -412,7 +429,8 @@ namespace jep
 		~text_handler(){};
 
 		boost::shared_ptr<static_text> getTextArray(std::string s, const boost::shared_ptr<ogl_context> &context, 
-			bool italics, glm::vec4 color, glm::vec4 trans_color, bool transparent, glm::vec2 position, float scale);
+			bool italics, glm::vec4 color, glm::vec4 trans_color, bool transparent, glm::vec2 position, float scale, 
+			float box_width = -1.0f, float box_height = -1.0f);
 
 	private:
 		map<int, boost::shared_ptr<ogl_data> > characters;
