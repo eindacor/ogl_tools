@@ -402,6 +402,7 @@ namespace jep
 			glm::vec3(0, 1, 0));								//up axis
 
 		projection_matrix = glm::perspective(fov, aspect_scale, .1f, 150.0f);
+		aspect_scale_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f / context->getAspectRatio(), 1.0f, 1.0f));
 	}
 
 	void ogl_camera::updateCamera()
@@ -413,6 +414,37 @@ namespace jep
 
 		setViewMatrix(view_matrix);
 	};
+
+	void ogl_camera::setMVP(const boost::shared_ptr<ogl_context> &context, const glm::mat4 &model_matrix, const render_type &rt)
+	{
+		if (current_render_type == rt && model_matrix == previous_model_matrix)
+			return;
+
+		current_render_type = rt;
+		glm::mat4 MVP;
+
+		switch(current_render_type)
+		{
+		case NORMAL:
+			previous_model_matrix = model_matrix;
+			MVP = projection_matrix * view_matrix * model_matrix;
+			glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
+			break;
+
+		case TEXT: //TEST and ABSOLUTE are separated in case this method eventually has more responsibilities
+		case ABSOLUTE:
+			previous_model_matrix = model_matrix;
+			MVP = model_matrix * aspect_scale_matrix;
+			glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
+			break;
+
+		default:
+			previous_model_matrix = model_matrix;
+			MVP = projection_matrix * view_matrix * model_matrix;
+			glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
+			break;
+		}
+	}
 
 	/*
 	void ogl_camera_rigged::update()
@@ -771,7 +803,7 @@ namespace jep
 		glDeleteTextures(1, TEX.get());
 	}
 
-	void ogl_model_animated::draw(boost::shared_ptr<ogl_context> context, boost::shared_ptr<ogl_camera> camera)
+	void ogl_model_animated::draw(const boost::shared_ptr<ogl_context> &context, const boost::shared_ptr<ogl_camera> &camera)
 	{
 		int start_location_offset = animation_indices.at(current_animation).at(current_frame);
 		//TODO find way to identify how many frames/vertices belong to each animation
@@ -783,8 +815,7 @@ namespace jep
 		glBindVertexArray(*temp_vao);
 		glBindTexture(GL_TEXTURE_2D, *temp_tex);
 
-		glm::mat4 MVP = camera->getProjectionMatrix() * camera->getViewMatrix() * getModelMatrix();
-		glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
+		camera->setMVP(context, getModelMatrix(), NORMAL);
 		glDrawArrays(GL_TRIANGLES, start_location_offset, frame_vertex_count);
 
 		glBindTexture(GL_TEXTURE_2D, 0);
@@ -798,6 +829,18 @@ namespace jep
 		const boost::shared_ptr<ogl_context> &context, GLchar* text_shader_ID, GLchar* text_color_shader_ID,
 		GLchar* transparent_color_shader_ID)
 	{
+		//TODO try moving all of the "set" funcitons outside of the loop
+		//enable text rendering in shader
+		glUniform1i(context->getShaderGLint(text_shader_ID), true);
+
+		//set text color
+		glUniform4f(context->getShaderGLint(text_color_shader_ID),
+			text_color.x, text_color.y, text_color.z, text_color.w);
+
+		//set transparent color
+		glUniform4f(context->getShaderGLint(transparent_color_shader_ID),
+			transparency_color.x, transparency_color.y, transparency_color.z, transparency_color.w);
+
 		int counter = 0;
 		for (auto i : character_array)
 		{
@@ -808,30 +851,22 @@ namespace jep
 			glBindVertexArray(*temp_vao);
 			glBindTexture(GL_TEXTURE_2D, *temp_tex);
 
-			//TODO try moving all of the "set" funcitons outside of the loop
-			//tell shader to activate text rendering
-			glUniform1i(context->getShaderGLint(text_shader_ID), true);
-
-			//set text color
-			glUniform4f(context->getShaderGLint(text_color_shader_ID),
-				text_color.x, text_color.y, text_color.z, text_color.w);
-
-			//set transparent color
-			glUniform4f(context->getShaderGLint(transparent_color_shader_ID),
-				transparency_color.x, transparency_color.y, transparency_color.z, transparency_color.w);
-
+			
+			
 			//set mvp
 			glm::mat4 character_translation_matrix = i.second;
-			glm::mat4 MVP = text_translation_matrix * text_scale_matrix * character_translation_matrix;
-			glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
+			glm::mat4 model_matrix = text_translation_matrix * text_scale_matrix * character_translation_matrix;
+			camera->setMVP(context, model_matrix, (render_type)2);
 
 			glDrawArrays(GL_TRIANGLES, 0, i.first->getVertexCount());
 
-			//disable text rendering
-			glUniform1i(context->getShaderGLint(text_shader_ID), false);
+			
 			glBindTexture(GL_TEXTURE_2D, 0);
 			glBindVertexArray(0);
 		}
+
+		//disable text rendering
+		glUniform1i(context->getShaderGLint(text_shader_ID), false);
 	}
 
 	text_handler::text_handler(const boost::shared_ptr<ogl_context> &context, const char* text_image_path)
@@ -852,14 +887,10 @@ namespace jep
 			glm::vec2 uv_upper_right(u_offset + uv_step, v_offset + uv_step);
 			glm::vec2 uv_lower_right(u_offset + uv_step, v_offset);
 
-			float aspect_ratio = context->getAspectRatio();
-
-			float positive_x_offset = 1.0f / aspect_ratio;
-
 			glm::vec4 xy_lower_left(0.0f, -1.0f, 0.0f, 1.0f);
 			glm::vec4 xy_upper_left(0.0f, 0.0f, 0.0f, 1.0f);
-			glm::vec4 xy_upper_right(positive_x_offset, 0.0f, 0.0f, 1.0f);
-			glm::vec4 xy_lower_right(positive_x_offset, -1.0f, 0.0f, 1.0f);
+			glm::vec4 xy_upper_right(1.0f, 0.0f, 0.0f, 1.0f);
+			glm::vec4 xy_lower_right(1.0f, -1.0f, 0.0f, 1.0f);
 
 			vector<float> character_vertices{
 				xy_lower_left.x, xy_lower_left.y, 0.0f,
@@ -901,7 +932,7 @@ namespace jep
 		//TODO modify so characters are offset by a specific spacing according to character
 		int line_character_count = 0;
 		int line_count = 0;
-
+		
 		for (auto i : s)
 		{
 			if (i == '\n')
@@ -921,17 +952,14 @@ namespace jep
 			if (italics)
 				index += 96;
 
-			float aspect_ratio = context->getAspectRatio();
-
-			float x_offset = (float)line_character_count * (1.0f / aspect_ratio); //aspect ratio might be needed if/when the text is projected to screen and not transformed with MVP
+			float x_offset = (float)line_character_count * 0.5f; 
 			float y_offset = (float)line_count * -1.0f;
 
 			glm::mat4 translation_matrix(glm::translate(glm::mat4(1.0f), glm::vec3(x_offset, y_offset, 0.0f)));
-			//glm::mat4 translation_matrix(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f)));
 			character_array.push_back(std::pair<boost::shared_ptr<ogl_data>, glm::mat4>(characters.at(index), translation_matrix));
 			line_character_count++;
 		}
-
+		
 		boost::shared_ptr<static_text> text_object(new static_text(character_array, color, trans_color, transparent, position, scale));
 		return text_object;
 	}

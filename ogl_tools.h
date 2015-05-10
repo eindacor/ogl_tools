@@ -18,6 +18,7 @@ namespace jep
 	class ogl_context;
 	class key_handler;
 	class ogl_camera;
+	enum render_type { NORMAL, TEXT, ABSOLUTE };
 
 	const float getLineAngle(glm::vec2 first, glm::vec2 second, bool right_handed);
 	const glm::vec4 rotatePointAroundOrigin(const glm::vec4 &point, const glm::vec4 &origin, const float degrees, const glm::vec3 &axis);
@@ -84,8 +85,9 @@ namespace jep
 
 		void setViewMatrix(const glm::mat4 &vm) { view_matrix = vm; }
 		const glm::mat4 getViewMatrix() const { return view_matrix; }
-		boost::shared_ptr<key_handler> getKeys() { return keys; }
 		const glm::mat4 getProjectionMatrix() const { return projection_matrix; }
+		boost::shared_ptr<key_handler> getKeys() { return keys; }
+		void setMVP(const boost::shared_ptr<ogl_context> &context, const glm::mat4 &model_matrix, const render_type &rt);
 
 		const glm::vec3 getFocus() const { return camera_focus; }
 		const glm::vec3 getPosition() const { return camera_position; }
@@ -98,8 +100,12 @@ namespace jep
 	private:
 		glm::mat4 view_matrix;
 		glm::mat4 projection_matrix;
+		glm::mat4 previous_model_matrix;
+		glm::mat4 aspect_scale_matrix;
 		boost::shared_ptr<key_handler> keys;
 		float aspect_scale;
+
+		render_type current_render_type;
 
 		glm::vec3 camera_focus;
 		glm::vec3 camera_position;
@@ -346,7 +352,7 @@ namespace jep
 		ogl_model_animated(boost::shared_ptr<ogl_data> ogld) : ogl_model(ogld) {};
 		~ogl_model_animated(){};
 
-		virtual void draw(boost::shared_ptr<ogl_context> context, boost::shared_ptr<ogl_camera> camera);
+		virtual void draw(const boost::shared_ptr<ogl_context> &context, const boost::shared_ptr<ogl_camera> &camera);
 
 	private:
 		//first int is animation index, second is frame index, third is byte offset in opengl array
