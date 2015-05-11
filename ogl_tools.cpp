@@ -764,7 +764,7 @@ namespace jep
 					int position_vec_size, 
 					int uv_vec_size, 
 					int stride, 
-					int offset)
+					int uv_offset)
 	{
 		VAO = boost::shared_ptr<GLuint>(new GLuint);
 		VBO = boost::shared_ptr<GLuint>(new GLuint);
@@ -791,7 +791,7 @@ namespace jep
 		glEnableVertexAttribArray(1);
 		//if points passed were vec3's, size = 3
 		glVertexAttribPointer(0, position_vec_size, GL_FLOAT, GL_FALSE, stride, (void*)0);
-		glVertexAttribPointer(1, uv_vec_size, GL_FLOAT, GL_FALSE, stride, (void*)(offset));
+		glVertexAttribPointer(1, uv_vec_size, GL_FLOAT, GL_FALSE, stride, (void*)(uv_offset));
 
 		glBindVertexArray(0);
 	}
@@ -881,17 +881,16 @@ namespace jep
 
 			glBindVertexArray(*temp_vao);
 			glBindTexture(GL_TEXTURE_2D, *temp_tex);
-
-			
-			
+	
 			//set mvp
 			glm::mat4 character_translation_matrix = i.second;
 			glm::mat4 model_matrix = text_translation_matrix * text_scale_matrix * character_translation_matrix;
 			camera->setMVP(context, model_matrix, (render_type)2);
 
+			//TODO change offset so it's variable depending on the character to be rendered
+			//store all character data in the same buffer, offset accordingly based on current character
 			glDrawArrays(GL_TRIANGLES, 0, i.first->getVertexCount());
-
-			
+		
 			glBindTexture(GL_TEXTURE_2D, 0);
 			glBindVertexArray(0);
 		}

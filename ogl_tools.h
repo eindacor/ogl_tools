@@ -291,7 +291,7 @@ namespace jep
 				int position_vec_size, 
 				int uv_vec_size, 
 				int stride, 
-				int offset);
+				int uv_offset);
 		ogl_data(boost::shared_ptr<ogl_context> context,
 			boost::shared_ptr<GLuint> existing_texture,
 			GLenum draw_type,
@@ -299,7 +299,7 @@ namespace jep
 			int position_vec_size,
 			int uv_vec_size,
 			int stride,
-			int offset);
+			int uv_offset);
 		~ogl_data();
 
 		const int getVertexCount() const { return vertex_count; }
