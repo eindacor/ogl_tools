@@ -780,12 +780,43 @@ namespace jep
 		glBindVertexArray(*VAO);
 
 		jep::loadTexture(texture_path, *TEX);
-		//TODO make the name of the texture hanlder variable
+		//TODO make the name of the texture handler variable
 		GLuint texture_ID = context->getShaderGLint("myTextureSampler");
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, *TEX);
 		glUniform1i(texture_ID, 0);
 		glBindTexture(GL_TEXTURE_2D, 0);
+
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+		//if points passed were vec3's, size = 3
+		glVertexAttribPointer(0, position_vec_size, GL_FLOAT, GL_FALSE, stride, (void*)0);
+		glVertexAttribPointer(1, uv_vec_size, GL_FLOAT, GL_FALSE, stride, (void*)(offset));
+
+		glBindVertexArray(0);
+	}
+
+	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
+		boost::shared_ptr<GLuint> existing_texture,
+		GLenum draw_type,
+		std::vector<float> vec_vertices,
+		int position_vec_size,
+		int uv_vec_size,
+		int stride,
+		int offset)
+	{
+		VAO = boost::shared_ptr<GLuint>(new GLuint);
+		VBO = boost::shared_ptr<GLuint>(new GLuint);
+		TEX = existing_texture;
+
+		vertex_count = vec_vertices.size();
+
+		glGenBuffers(1, VBO.get());
+		glBindBuffer(GL_ARRAY_BUFFER, *VBO);
+		glBufferData(GL_ARRAY_BUFFER, vec_vertices.size() * sizeof(float), &vec_vertices[0], draw_type);
+
+		glGenVertexArrays(1, VAO.get());
+		glBindVertexArray(*VAO);
 
 		glEnableVertexAttribArray(0);
 		glEnableVertexAttribArray(1);
@@ -895,6 +926,9 @@ namespace jep
 		//image file must be made as a 16 x 16 grid
 		float uv_step = 1.0f / 16.0f;
 
+		TEX = boost::shared_ptr<GLuint>(new GLuint);
+		jep::loadTexture(text_image_path, *TEX);
+
 		for (int i = 0; i < 256; i++)
 		{
 			int u_index = i % 16;
@@ -931,7 +965,7 @@ namespace jep
 			boost::shared_ptr<ogl_data> opengl_data(
 				new jep::ogl_data(
 				context,
-				text_image_path,
+				TEX,
 				GL_STATIC_DRAW,
 				character_vertices,
 				3,
@@ -940,6 +974,7 @@ namespace jep
 				3 * sizeof(float)
 				));
 
+			opengl_data->overrideTEX(TEX);
 			characters.insert(std::pair<int, boost::shared_ptr<ogl_data> >(i, opengl_data));
 		}
 	}

@@ -283,6 +283,7 @@ namespace jep
 	class ogl_data
 	{
 	public:
+		//add overrides for solid colors, existing textures, etc.
 		ogl_data(boost::shared_ptr<ogl_context> context,
 				const char* texture_path,
 				GLenum draw_type, 
@@ -291,6 +292,14 @@ namespace jep
 				int uv_vec_size, 
 				int stride, 
 				int offset);
+		ogl_data(boost::shared_ptr<ogl_context> context,
+			boost::shared_ptr<GLuint> existing_texture,
+			GLenum draw_type,
+			std::vector<float> vec_vertices,
+			int position_vec_size,
+			int uv_vec_size,
+			int stride,
+			int offset);
 		~ogl_data();
 
 		const int getVertexCount() const { return vertex_count; }
@@ -298,6 +307,10 @@ namespace jep
 		boost::shared_ptr<GLuint> getVBO() const { return VBO; }
 		boost::shared_ptr<GLuint> getVAO() const { return VAO; }
 		boost::shared_ptr<GLuint> getTEX() const { return TEX; }
+
+		void overrideVBO(boost::shared_ptr<GLuint> new_VBO) { VBO = new_VBO; }
+		void overrideVAO(boost::shared_ptr<GLuint> new_VAO) { VAO = new_VAO; }
+		void overrideTEX(boost::shared_ptr<GLuint> new_TEX) { TEX = new_TEX; }
 
 	private:
 		boost::shared_ptr<GLuint> VBO;
@@ -434,6 +447,8 @@ namespace jep
 
 	private:
 		map<int, boost::shared_ptr<ogl_data> > characters;
+		boost::shared_ptr<GLuint> TEX;
+
 	};
 
 	
