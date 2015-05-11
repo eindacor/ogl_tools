@@ -439,7 +439,7 @@ namespace jep
 	{
 	public:
 		text_handler(const boost::shared_ptr<ogl_context> &context, const char* text_image_path);
-		~text_handler(){};
+		~text_handler(){ glDeleteTextures(1, TEX.get()); }
 
 		boost::shared_ptr<static_text> getTextArray(std::string s, const boost::shared_ptr<ogl_context> &context, 
 			bool italics, glm::vec4 color, glm::vec4 trans_color, bool transparent, glm::vec2 position, float scale, 
@@ -451,7 +451,34 @@ namespace jep
 
 	};
 
-	
+	class texture_handler
+	{
+	public:
+		texture_handler(){}
+		~texture_handler()
+		{
+			for (auto i : textures)
+				glDeleteTextures(1, i.second.get());
+		}
+
+		boost::shared_ptr<GLuint> addTexture(string name, string file_path)
+		{
+			boost::shared_ptr<GLuint> new_texture(new GLuint);
+			jep::loadTexture(file_path.c_str(), *new_texture);
+			textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(name, new_texture));
+		}
+
+		boost::shared_ptr<GLuint> getTexture(string name)
+		{
+			if (textures.find(name) == textures.end())
+				return nullptr;
+
+			return textures.at(name);
+		}
+
+	private:
+		std::map<string, boost::shared_ptr<GLuint> > textures;
+	};
 }
 
 #endif
