@@ -431,10 +431,16 @@ namespace jep
 			glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
 			break;
 
-		case TEXT: //TEST and ABSOLUTE are separated in case this method eventually has more responsibilities
-		case ABSOLUTE:
+		case TEXT: //aspect ratio is adjusted in within the code, since aspect ratio adjustments need to be made before the objects are translated
 			previous_model_matrix = model_matrix;
 			MVP = model_matrix * aspect_scale_matrix;
+			glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
+			break;
+
+		case ABSOLUTE:
+			//aspect ratio is adjusted in within the code, since aspect ratio adjustments need to be made before the objects are translated
+			previous_model_matrix = model_matrix;
+			MVP = model_matrix;
 			glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
 			break;
 
@@ -885,7 +891,7 @@ namespace jep
 			//set mvp
 			glm::mat4 character_translation_matrix = i.second;
 			glm::mat4 model_matrix = text_translation_matrix * text_scale_matrix * character_translation_matrix;
-			camera->setMVP(context, model_matrix, (render_type)2);
+			camera->setMVP(context, model_matrix, TEXT);
 
 			//TODO change offset so it's variable depending on the character to be rendered
 			//store all character data in the same buffer, offset accordingly based on current character
