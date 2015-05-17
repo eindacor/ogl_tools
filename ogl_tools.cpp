@@ -863,8 +863,7 @@ namespace jep
 	//TODO for draw functions, allow passing of a map of shader ID's with their corresponding values
 	//templatize if possible
 	void static_text::draw(const boost::shared_ptr<ogl_camera> &camera,
-		const boost::shared_ptr<ogl_context> &context, GLchar* text_shader_ID, GLchar* text_color_shader_ID,
-		GLchar* transparent_color_shader_ID)
+		const boost::shared_ptr<ogl_context> &context)
 	{
 		//TODO try moving all of the "set" funcitons outside of the loop
 		//enable text rendering in shader
@@ -897,6 +896,48 @@ namespace jep
 			//store all character data in the same buffer, offset accordingly based on current character
 			glDrawArrays(GL_TRIANGLES, 0, i.first->getVertexCount());
 		
+			glBindTexture(GL_TEXTURE_2D, 0);
+			glBindVertexArray(0);
+		}
+
+		//disable text rendering
+		glUniform1i(context->getShaderGLint(text_shader_ID), false);
+	}
+
+	void static_text::draw(const boost::shared_ptr<ogl_camera> &camera,
+		const boost::shared_ptr<ogl_context> &context, const glm::mat4 &position_matrix_override)
+	{
+		//TODO try moving all of the "set" funcitons outside of the loop
+		//enable text rendering in shader
+		glUniform1i(context->getShaderGLint(text_shader_ID), true);
+
+		//set text color
+		glUniform4f(context->getShaderGLint(text_color_shader_ID),
+			text_color.x, text_color.y, text_color.z, text_color.w);
+
+		//set transparent color
+		glUniform4f(context->getShaderGLint(transparent_color_shader_ID),
+			transparency_color.x, transparency_color.y, transparency_color.z, transparency_color.w);
+
+		int counter = 0;
+		for (auto i : character_array)
+		{
+			boost::shared_ptr<GLuint> temp_vao = i.first->getVAO();
+			boost::shared_ptr<GLuint> temp_vbo = i.first->getVBO();
+			boost::shared_ptr<GLuint> temp_tex = i.first->getTEX();
+
+			glBindVertexArray(*temp_vao);
+			glBindTexture(GL_TEXTURE_2D, *temp_tex);
+
+			//set mvp
+			glm::mat4 character_translation_matrix = i.second;
+			glm::mat4 model_matrix = position_matrix_override * text_scale_matrix * character_translation_matrix;
+			camera->setMVP(context, model_matrix, TEXT);
+
+			//TODO change offset so it's variable depending on the character to be rendered
+			//store all character data in the same buffer, offset accordingly based on current character
+			glDrawArrays(GL_TRIANGLES, 0, i.first->getVertexCount());
+
 			glBindTexture(GL_TEXTURE_2D, 0);
 			glBindVertexArray(0);
 		}
@@ -985,7 +1026,8 @@ namespace jep
 	}
 
 	boost::shared_ptr<static_text> text_handler::getTextArray(std::string s, const boost::shared_ptr<ogl_context> &context, 
-		bool italics, glm::vec4 color, glm::vec4 trans_color, bool transparent, glm::vec2 position, float scale, float box_width, float box_height)
+		bool italics, glm::vec4 color, glm::vec4 trans_color, GLchar* text_shader_ID, GLchar* text_color_shader_ID,
+		GLchar* transparent_color_shader_ID, bool transparent, glm::vec2 position, float scale, float box_width, float box_height)
 	{
 		float actual_max_width = (box_width / scale) * context->getAspectRatio();
 		int max_line_length(actual_max_width);
@@ -1044,8 +1086,8 @@ namespace jep
 
 		glm::vec2 lower_right(position.x + actual_width, position.y - actual_height);
 
-		boost::shared_ptr<static_text> text_object(new static_text(character_array, color, trans_color, 
-			transparent, position, lower_right, scale, box_width, box_height));
+		boost::shared_ptr<static_text> text_object(new static_text(character_array, color, trans_color, text_shader_ID, 
+			text_color_shader_ID, transparent_color_shader_ID, transparent, position, lower_right, scale, box_width, box_height));
 		return text_object;
 	}
 }

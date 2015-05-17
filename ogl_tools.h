@@ -386,13 +386,19 @@ namespace jep
 		
 	};
 
+	//TODO make static_text class format similar to dynamic_hud_array with justification options
+	//TODO enable word-wrapping without cutting off words
 	class static_text
 	{
 	public:
 		static_text(const std::vector< std::pair<boost::shared_ptr<ogl_data>, glm::mat4> > &char_array,
-			const glm::vec4 &color, const glm::vec4 &trans_color, bool transparent, const glm::vec2 &upper_left_position,
+			const glm::vec4 &color, const glm::vec4 &trans_color, GLchar* text_ID, GLchar* text_color_ID,
+			GLchar* transparent_color_ID, bool transparent, const glm::vec2 &upper_left_position,
 			const glm::vec2 &lower_right_position, float scale, float box_x = -1.0f, float box_y = -1.0f) : character_array(char_array)
 		{
+			text_shader_ID = text_ID;
+			text_color_shader_ID = text_color_ID;
+			transparent_color_shader_ID = transparent_color_ID;
 			text_color = color;
 			transparency_color = trans_color;
 			transparent_background = transparent;
@@ -408,9 +414,8 @@ namespace jep
 
 		~static_text(){};
 
-		void draw(const boost::shared_ptr<ogl_camera> &camera,
-			const boost::shared_ptr<ogl_context> &context, GLchar* text_shader_ID, GLchar* text_color_shader_ID,
-			GLchar* transparent_color_shader_ID);
+		void draw(const boost::shared_ptr<ogl_camera> &camera, const boost::shared_ptr<ogl_context> &context);
+		void draw(const boost::shared_ptr<ogl_camera> &camera, const boost::shared_ptr<ogl_context> &context, const glm::mat4 &position_matrix_override);
 
 		glm::vec2 getUpperLeft() const { return upper_left; }
 		glm::vec2 getLowerRight() const;
@@ -423,6 +428,10 @@ namespace jep
 		glm::mat4 text_scale_matrix;
 		bool transparent_background;
 		glm::mat4 text_translation_matrix;
+
+		GLchar* text_shader_ID;
+		GLchar* text_color_shader_ID;
+		GLchar* transparent_color_shader_ID;
 
 		glm::vec2 upper_left, lower_right;
 
@@ -442,7 +451,8 @@ namespace jep
 		~text_handler(){ glDeleteTextures(1, TEX.get()); }
 
 		boost::shared_ptr<static_text> getTextArray(std::string s, const boost::shared_ptr<ogl_context> &context, 
-			bool italics, glm::vec4 color, glm::vec4 trans_color, bool transparent, glm::vec2 position, float scale, 
+			bool italics, glm::vec4 color, glm::vec4 trans_color, GLchar* text_shader_ID, GLchar* text_color_shader_ID,
+			GLchar* transparent_color_shader_ID, bool transparent, glm::vec2 position, float scale,
 			float box_width = -1.0f, float box_height = -1.0f);
 
 	private:
