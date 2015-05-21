@@ -283,19 +283,40 @@ namespace jep
 	class ogl_data
 	{
 	public:
-		//add overrides for solid colors, existing textures, etc.
+		//new geometry, new texture
 		ogl_data(boost::shared_ptr<ogl_context> context,
-				const char* texture_path,
-				GLenum draw_type, 
-				std::vector<float> vec_vertices, 
-				int position_vec_size, 
-				int uv_vec_size, 
-				int stride, 
-				int uv_offset);
+			const char* texture_path,
+			GLenum draw_type, 
+			const std::vector<float> &vec_vertices,
+			int position_vec_size, 
+			int uv_vec_size, 
+			int stride, 
+			int uv_offset);
+		//new geometry, existing texture
 		ogl_data(boost::shared_ptr<ogl_context> context,
 			boost::shared_ptr<GLuint> existing_texture,
 			GLenum draw_type,
-			std::vector<float> vec_vertices,
+			const std::vector<float> &vec_vertices,
+			int position_vec_size,
+			int uv_vec_size,
+			int stride,
+			int uv_offset);
+		//new geometry, indexed vertices, new texture
+		ogl_data(boost::shared_ptr<ogl_context> context,
+			const char* texture_path,
+			GLenum draw_type,
+			const std::vector<float> &vec_vertices,
+			const std::vector<unsigned int> &indices,
+			int position_vec_size,
+			int uv_vec_size,
+			int stride,
+			int uv_offset);
+		//new geometry, indexed vertices, existing texture
+		ogl_data(boost::shared_ptr<ogl_context> context,
+			boost::shared_ptr<GLuint> existing_texture,
+			GLenum draw_type,
+			const std::vector<float> &vec_vertices,
+			const std::vector<unsigned int> &indices,
 			int position_vec_size,
 			int uv_vec_size,
 			int stride,

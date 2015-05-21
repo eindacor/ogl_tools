@@ -766,7 +766,7 @@ namespace jep
 	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
 					const char* texture_path, 
 					GLenum draw_type, 
-					std::vector<float> vec_vertices, 
+					const std::vector<float> &vec_vertices, 
 					int position_vec_size, 
 					int uv_vec_size, 
 					int stride, 
@@ -805,7 +805,7 @@ namespace jep
 	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
 		boost::shared_ptr<GLuint> existing_texture,
 		GLenum draw_type,
-		std::vector<float> vec_vertices,
+		const std::vector<float> &vec_vertices,
 		int position_vec_size,
 		int uv_vec_size,
 		int stride,
@@ -833,6 +833,80 @@ namespace jep
 		glBindVertexArray(0);
 	}
 
+	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
+		const char* texture_path,
+		GLenum draw_type,
+		const std::vector<float> &vec_vertices,
+		const std::vector<unsigned int> &vertex_indices,
+		int position_vec_size,
+		int uv_vec_size,
+		int stride,
+		int uv_offset)
+	{
+		VAO = boost::shared_ptr<GLuint>(new GLuint);
+		VBO = boost::shared_ptr<GLuint>(new GLuint);
+		TEX = boost::shared_ptr<GLuint>(new GLuint);
+
+		vertex_count = vec_vertices.size();
+
+		glGenBuffers(1, VBO.get());
+		glBindBuffer(GL_ARRAY_BUFFER, *VBO);
+		glBufferData(GL_ARRAY_BUFFER, vec_vertices.size() * sizeof(float), &vec_vertices[0], draw_type);
+
+		glGenVertexArrays(1, VAO.get());
+		glBindVertexArray(*VAO);
+
+		jep::loadTexture(texture_path, *TEX);
+		//TODO make the name of the texture handler variable
+		GLuint texture_ID = context->getShaderGLint("myTextureSampler");
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, *TEX);
+		glUniform1i(texture_ID, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+		//if points passed were vec3's, size = 3
+		glVertexAttribPointer(0, position_vec_size, GL_FLOAT, GL_FALSE, stride, (void*)0);
+		glVertexAttribPointer(1, uv_vec_size, GL_FLOAT, GL_FALSE, stride, (void*)(uv_offset));
+
+		glBindVertexArray(0);
+	}
+
+	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
+		boost::shared_ptr<GLuint> existing_texture,
+		GLenum draw_type,
+		const std::vector<float> &vec_vertices,
+		const std::vector<unsigned int> &vertex_indices,
+		int position_vec_size,
+		int uv_vec_size,
+		int stride,
+		int offset)
+	{
+		VAO = boost::shared_ptr<GLuint>(new GLuint);
+		VBO = boost::shared_ptr<GLuint>(new GLuint);
+		TEX = existing_texture;
+
+		vertex_count = vec_vertices.size();
+
+		glGenBuffers(1, VBO.get());
+		glBindBuffer(GL_ARRAY_BUFFER, *VBO);
+		glBufferData(GL_ARRAY_BUFFER, vec_vertices.size() * sizeof(float), &vec_vertices[0], draw_type);
+
+		glGenVertexArrays(1, VAO.get());
+		glBindVertexArray(*VAO);
+
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+		//if points passed were vec3's, size = 3
+		glVertexAttribPointer(0, position_vec_size, GL_FLOAT, GL_FALSE, stride, (void*)0);
+		glVertexAttribPointer(1, uv_vec_size, GL_FLOAT, GL_FALSE, stride, (void*)(offset));
+
+		glBindVertexArray(0);
+	}
+
+	//TODO detect whether texture was existing or unique, to avoid deleting textures still in use
+	//TODO let texture handler delete all textures associated
 	ogl_data::~ogl_data()
 	{
 		glDeleteVertexArrays(1, VAO.get());
