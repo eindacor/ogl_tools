@@ -324,19 +324,32 @@ namespace jep
 		~ogl_data();
 
 		const int getVertexCount() const { return vertex_count; }
+		const int getIndexCount() const { return index_count; }
 
 		boost::shared_ptr<GLuint> getVBO() const { return VBO; }
 		boost::shared_ptr<GLuint> getVAO() const { return VAO; }
 		boost::shared_ptr<GLuint> getTEX() const { return TEX; }
+		boost::shared_ptr<GLuint> getIND() const { return IND; }
 
 		void overrideVBO(boost::shared_ptr<GLuint> new_VBO) { VBO = new_VBO; }
 		void overrideVAO(boost::shared_ptr<GLuint> new_VAO) { VAO = new_VAO; }
 		void overrideTEX(boost::shared_ptr<GLuint> new_TEX) { TEX = new_TEX; }
+		void overrideIND(boost::shared_ptr<GLuint> new_IND) { TEX = new_IND; }
 
 	private:
+		void initializeGLuints() {
+			VAO = boost::shared_ptr<GLuint>(new GLuint);
+			VBO = boost::shared_ptr<GLuint>(new GLuint);
+			TEX = boost::shared_ptr<GLuint>(new GLuint);
+			IND = boost::shared_ptr<GLuint>(new GLuint);
+		}
+
 		boost::shared_ptr<GLuint> VBO;
 		boost::shared_ptr<GLuint> VAO;
 		boost::shared_ptr<GLuint> TEX;
+		boost::shared_ptr<GLuint> IND;
+		bool element_array_enabled;
+		unsigned int index_count;
 		int vertex_count;
 	};
 

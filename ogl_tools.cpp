@@ -763,6 +763,7 @@ namespace jep
 		x_window_position = (center_x - x_position) / center_x * -1.0f;
 	}
 
+	//new geometry, new texture
 	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
 					const char* texture_path, 
 					GLenum draw_type, 
@@ -772,10 +773,8 @@ namespace jep
 					int stride, 
 					int uv_offset)
 	{
-		VAO = boost::shared_ptr<GLuint>(new GLuint);
-		VBO = boost::shared_ptr<GLuint>(new GLuint);
-		TEX = boost::shared_ptr<GLuint>(new GLuint);
-
+		initializeGLuints();
+		element_array_enabled = false;
 		vertex_count = vec_vertices.size();
 
 		glGenBuffers(1, VBO.get());
@@ -802,6 +801,7 @@ namespace jep
 		glBindVertexArray(0);
 	}
 
+	//new geometry, existing texture
 	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
 		boost::shared_ptr<GLuint> existing_texture,
 		GLenum draw_type,
@@ -811,10 +811,9 @@ namespace jep
 		int stride,
 		int offset)
 	{
-		VAO = boost::shared_ptr<GLuint>(new GLuint);
-		VBO = boost::shared_ptr<GLuint>(new GLuint);
+		initializeGLuints();
 		TEX = existing_texture;
-
+		element_array_enabled = false;
 		vertex_count = vec_vertices.size();
 
 		glGenBuffers(1, VBO.get());
@@ -833,6 +832,7 @@ namespace jep
 		glBindVertexArray(0);
 	}
 
+	//new geometry, indexed vertices, new texture
 	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
 		const char* texture_path,
 		GLenum draw_type,
@@ -843,15 +843,18 @@ namespace jep
 		int stride,
 		int uv_offset)
 	{
-		VAO = boost::shared_ptr<GLuint>(new GLuint);
-		VBO = boost::shared_ptr<GLuint>(new GLuint);
-		TEX = boost::shared_ptr<GLuint>(new GLuint);
-
+		initializeGLuints();
+		element_array_enabled = true;
+		index_count = vertex_indices.size();
 		vertex_count = vec_vertices.size();
 
 		glGenBuffers(1, VBO.get());
 		glBindBuffer(GL_ARRAY_BUFFER, *VBO);
 		glBufferData(GL_ARRAY_BUFFER, vec_vertices.size() * sizeof(float), &vec_vertices[0], draw_type);
+
+		glGenBuffers(1, IND.get());
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *IND);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, vertex_indices.size() * sizeof(unsigned int), &vertex_indices[0], draw_type);
 
 		glGenVertexArrays(1, VAO.get());
 		glBindVertexArray(*VAO);
@@ -873,6 +876,7 @@ namespace jep
 		glBindVertexArray(0);
 	}
 
+	//new geometry, indexed vertices, existing texture
 	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
 		boost::shared_ptr<GLuint> existing_texture,
 		GLenum draw_type,
@@ -883,10 +887,10 @@ namespace jep
 		int stride,
 		int offset)
 	{
-		VAO = boost::shared_ptr<GLuint>(new GLuint);
-		VBO = boost::shared_ptr<GLuint>(new GLuint);
+		initializeGLuints();
 		TEX = existing_texture;
-
+		element_array_enabled = true;
+		index_count = vertex_indices.size();
 		vertex_count = vec_vertices.size();
 
 		glGenBuffers(1, VBO.get());
