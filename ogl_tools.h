@@ -321,6 +321,18 @@ namespace jep
 			int uv_vec_size,
 			int stride,
 			int uv_offset);
+		//new geometry, indexed vertices, new texture
+		ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
+			const char* texture_path,
+			GLenum draw_type,
+			const std::vector<unsigned int> &indices,
+			const std::vector<float> &vertex_data,
+			int v_data_size,
+			int vt_data_size,
+			int vn_data_size,
+			int uv_offset,
+			int normal_offset,
+			int stride);
 		~ogl_data();
 
 		const int getVertexCount() const { return vertex_count; }

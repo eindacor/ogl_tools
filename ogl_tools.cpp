@@ -909,6 +909,61 @@ namespace jep
 		glBindVertexArray(0);
 	}
 
+	//new geometry, indexed vertices, new texture
+	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
+		const char* texture_path,
+		GLenum draw_type,
+		const std::vector<unsigned int> &indices,
+		const std::vector<float> &vertex_data,
+		int v_data_size,
+		int vt_data_size,
+		int vn_data_size,
+		int uv_offset,
+		int normal_offset,
+		int stride)
+	{
+		index_count = indices.size();
+		vertex_count = vertex_data.size();
+
+		initializeGLuints();
+
+		glGenBuffers(1, VBO.get());
+		glBindBuffer(GL_ARRAY_BUFFER, *VBO);
+		glBufferData(GL_ARRAY_BUFFER, vertex_data.size() * sizeof(float), &vertex_data[0], draw_type);
+
+		glGenBuffers(1, IND.get());
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *IND);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], draw_type);
+
+		glGenVertexArrays(1, VAO.get());
+		glBindVertexArray(*VAO);
+
+		jep::loadTexture(texture_path, *TEX);
+		//TODO make the name of the texture handler variable
+		GLuint texture_ID = context->getShaderGLint("myTextureSampler");
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, *TEX);
+		glUniform1i(texture_ID, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	
+		//TODO revise so all data exists in one buffer
+		//position
+		//TODO pass size of each element to constructor instead of hard-coding
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, v_data_size, GL_FLOAT, GL_FALSE, stride, (void*)0);
+
+		//uv
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, vt_data_size, GL_FLOAT, GL_FALSE, stride, (void*)(uv_offset));
+
+		//normals
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, vn_data_size, GL_FLOAT, GL_FALSE, stride, (void*)(normal_offset));
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
+
 	//TODO detect whether texture was existing or unique, to avoid deleting textures still in use
 	//TODO let texture handler delete all textures associated
 	ogl_data::~ogl_data()
@@ -956,7 +1011,7 @@ namespace jep
 			transparency_color.x, transparency_color.y, transparency_color.z, transparency_color.w);
 
 		int counter = 0;
-		for (auto i : character_array)
+		for (const auto &i : character_array)
 		{
 			boost::shared_ptr<GLuint> temp_vao = i.first->getVAO();
 			boost::shared_ptr<GLuint> temp_vbo = i.first->getVBO();
@@ -998,7 +1053,7 @@ namespace jep
 			transparency_color.x, transparency_color.y, transparency_color.z, transparency_color.w);
 
 		int counter = 0;
-		for (auto i : character_array)
+		for (const auto &i : character_array)
 		{
 			boost::shared_ptr<GLuint> temp_vao = i.first->getVAO();
 			boost::shared_ptr<GLuint> temp_vbo = i.first->getVBO();
@@ -1124,7 +1179,7 @@ namespace jep
 		float total_width = 0;
 		float total_height = 0;
 		
-		for (auto i : s)
+		for (const auto &i : s)
 		{
 			if (i == '\n' || (x_bound && line_character_index >= max_line_length))
 			{
