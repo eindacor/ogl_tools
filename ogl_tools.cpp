@@ -858,7 +858,7 @@ namespace jep
 
 		initializeGLuints();
 		unique_texture = true;
-
+		element_array_enabled = true;
 		glGenVertexArrays(1, VAO.get());
 		glBindVertexArray(*VAO);
 
@@ -921,6 +921,7 @@ namespace jep
 
 		TEX = existing_texture;
 		unique_texture = false;
+		element_array_enabled = true;
 
 		glGenVertexArrays(1, VAO.get());
 		glBindVertexArray(*VAO);
@@ -963,7 +964,6 @@ namespace jep
 		glBindVertexArray(0);
 	}
 
-	//TODO detect whether texture was existing or unique, to avoid deleting textures still in use
 	//TODO let texture handler delete all textures associated
 	ogl_data::~ogl_data()
 	{
