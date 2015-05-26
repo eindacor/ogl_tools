@@ -305,14 +305,16 @@ namespace jep
 		ogl_data(boost::shared_ptr<ogl_context> context,
 			boost::shared_ptr<GLuint> existing_texture,
 			GLenum draw_type,
-			const std::vector<float> &vec_vertices,
 			const std::vector<unsigned short> &indices,
-			int position_vec_size,
-			int uv_vec_size,
-			int stride,
-			int uv_offset);
+			const std::vector<float> &vertex_data,
+			int v_data_size,
+			int vt_data_size,
+			int vn_data_size,
+			int uv_offset,
+			int normal_offset,
+			int stride);
 		//new geometry, indexed vertices, new texture
-		ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
+		ogl_data(boost::shared_ptr<ogl_context> context,
 			const char* texture_path,
 			GLenum draw_type,
 			const std::vector<unsigned short> &indices,
@@ -353,6 +355,7 @@ namespace jep
 		bool element_array_enabled;
 		unsigned short index_count;
 		int vertex_count;
+		bool unique_texture;
 	};
 
 	//class that stores/renders multiple ogl_data objects
@@ -500,18 +503,28 @@ namespace jep
 	class texture_handler
 	{
 	public:
-		texture_handler(){}
+		texture_handler(string default_path){ default_file_path = default_path; }
 		~texture_handler()
 		{
 			for (auto i : textures)
 				glDeleteTextures(1, i.second.get());
 		}
 
-		boost::shared_ptr<GLuint> addTexture(string name, string file_path)
+		boost::shared_ptr<GLuint> addTexture(string file_name)
+		{
+			string full_path = default_file_path + "\\" + file_name;
+			boost::shared_ptr<GLuint> new_texture(new GLuint);
+			jep::loadTexture(full_path.c_str(), *new_texture);
+			textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, new_texture));
+			return textures.at(file_name);
+		}
+
+		boost::shared_ptr<GLuint> addTexture(string file_name, string file_path)
 		{
 			boost::shared_ptr<GLuint> new_texture(new GLuint);
 			jep::loadTexture(file_path.c_str(), *new_texture);
-			textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(name, new_texture));
+			textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, new_texture));
+			return textures.at(file_name);
 		}
 
 		boost::shared_ptr<GLuint> getTexture(string name)
@@ -524,6 +537,7 @@ namespace jep
 
 	private:
 		std::map<string, boost::shared_ptr<GLuint> > textures;
+		string default_file_path;
 	};
 }
 

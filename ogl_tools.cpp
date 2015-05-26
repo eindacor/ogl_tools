@@ -774,6 +774,7 @@ namespace jep
 					int uv_offset)
 	{
 		initializeGLuints();
+		unique_texture = true;
 		element_array_enabled = false;
 		vertex_count = vec_vertices.size();
 
@@ -813,6 +814,7 @@ namespace jep
 	{
 		initializeGLuints();
 		TEX = existing_texture;
+		unique_texture = false;
 		element_array_enabled = false;
 		vertex_count = vec_vertices.size();
 
@@ -823,38 +825,11 @@ namespace jep
 		glGenVertexArrays(1, VAO.get());
 		glBindVertexArray(*VAO);
 
-		glEnableVertexAttribArray(0);
-		glEnableVertexAttribArray(1);
-		//if points passed were vec3's, size = 3
-		glVertexAttribPointer(0, position_vec_size, GL_FLOAT, GL_FALSE, stride, (void*)0);
-		glVertexAttribPointer(1, uv_vec_size, GL_FLOAT, GL_FALSE, stride, (void*)(offset));
-
-		glBindVertexArray(0);
-	}
-
-	//new geometry, indexed vertices, existing texture
-	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
-		boost::shared_ptr<GLuint> existing_texture,
-		GLenum draw_type,
-		const std::vector<float> &vec_vertices,
-		const std::vector<unsigned short> &vertex_indices,
-		int position_vec_size,
-		int uv_vec_size,
-		int stride,
-		int offset)
-	{
-		initializeGLuints();
-		TEX = existing_texture;
-		element_array_enabled = true;
-		index_count = vertex_indices.size();
-		vertex_count = vec_vertices.size();
-
-		glGenBuffers(1, VBO.get());
-		glBindBuffer(GL_ARRAY_BUFFER, *VBO);
-		glBufferData(GL_ARRAY_BUFFER, vec_vertices.size() * sizeof(float), &vec_vertices[0], draw_type);
-
-		glGenVertexArrays(1, VAO.get());
-		glBindVertexArray(*VAO);
+		GLuint texture_ID = context->getShaderGLint("myTextureSampler");
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, *TEX);
+		glUniform1i(texture_ID, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
 
 		glEnableVertexAttribArray(0);
 		glEnableVertexAttribArray(1);
@@ -882,6 +857,7 @@ namespace jep
 		vertex_count = vertex_data.size();
 
 		initializeGLuints();
+		unique_texture = true;
 
 		glGenVertexArrays(1, VAO.get());
 		glBindVertexArray(*VAO);
@@ -925,13 +901,78 @@ namespace jep
 		glBindVertexArray(0);
 	}
 
+	//new geometry, indexed vertices, existing texture
+	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
+		boost::shared_ptr<GLuint> existing_texture,
+		GLenum draw_type,
+		const std::vector<unsigned short> &indices,
+		const std::vector<float> &vertex_data,
+		int v_data_size,
+		int vt_data_size,
+		int vn_data_size,
+		int uv_offset,
+		int normal_offset,
+		int stride)
+	{
+		index_count = indices.size();
+		vertex_count = vertex_data.size();
+
+		initializeGLuints();
+
+		TEX = existing_texture;
+		unique_texture = false;
+
+		glGenVertexArrays(1, VAO.get());
+		glBindVertexArray(*VAO);
+
+		GLuint texture_ID = context->getShaderGLint("myTextureSampler");
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, *TEX);
+		glUniform1i(texture_ID, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		glGenBuffers(1, VBO.get());
+		glBindBuffer(GL_ARRAY_BUFFER, *VBO);
+		glBufferData(GL_ARRAY_BUFFER, vertex_data.size() * sizeof(float), &vertex_data[0], draw_type);
+
+		glGenBuffers(1, IND.get());
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *IND);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned short), &indices[0], draw_type);
+
+		//TODO revise so all data exists in one buffer
+		//position
+		//TODO pass size of each element to constructor instead of hard-coding
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, v_data_size, GL_FLOAT, GL_FALSE, stride, (void*)0);
+
+		//uv
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, vt_data_size, GL_FLOAT, GL_FALSE, stride, (void*)(uv_offset));
+
+		//normals
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, vn_data_size, GL_FLOAT, GL_FALSE, stride, (void*)(normal_offset));
+
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+		glDisableVertexAttribArray(2);
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindVertexArray(0);
+	}
+
 	//TODO detect whether texture was existing or unique, to avoid deleting textures still in use
 	//TODO let texture handler delete all textures associated
 	ogl_data::~ogl_data()
 	{
 		glDeleteVertexArrays(1, VAO.get());
 		glDeleteBuffers(1, VBO.get());
-		glDeleteTextures(1, TEX.get());
+		glDeleteBuffers(1, IND.get());
+
+		if (unique_texture)
+			glDeleteTextures(1, TEX.get());
 	}
 
 	void ogl_model_animated::draw(const boost::shared_ptr<ogl_context> &context, const boost::shared_ptr<ogl_camera> &camera)
