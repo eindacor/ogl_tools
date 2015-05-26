@@ -832,56 +832,12 @@ namespace jep
 		glBindVertexArray(0);
 	}
 
-	//new geometry, indexed vertices, new texture
-	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
-		const char* texture_path,
-		GLenum draw_type,
-		const std::vector<float> &vec_vertices,
-		const std::vector<unsigned int> &vertex_indices,
-		int position_vec_size,
-		int uv_vec_size,
-		int stride,
-		int uv_offset)
-	{
-		initializeGLuints();
-		element_array_enabled = true;
-		index_count = vertex_indices.size();
-		vertex_count = vec_vertices.size();
-
-		glGenBuffers(1, VBO.get());
-		glBindBuffer(GL_ARRAY_BUFFER, *VBO);
-		glBufferData(GL_ARRAY_BUFFER, vec_vertices.size() * sizeof(float), &vec_vertices[0], draw_type);
-
-		glGenBuffers(1, IND.get());
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *IND);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, vertex_indices.size() * sizeof(unsigned int), &vertex_indices[0], draw_type);
-
-		glGenVertexArrays(1, VAO.get());
-		glBindVertexArray(*VAO);
-
-		jep::loadTexture(texture_path, *TEX);
-		//TODO make the name of the texture handler variable
-		GLuint texture_ID = context->getShaderGLint("myTextureSampler");
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, *TEX);
-		glUniform1i(texture_ID, 0);
-		glBindTexture(GL_TEXTURE_2D, 0);
-
-		glEnableVertexAttribArray(0);
-		glEnableVertexAttribArray(1);
-		//if points passed were vec3's, size = 3
-		glVertexAttribPointer(0, position_vec_size, GL_FLOAT, GL_FALSE, stride, (void*)0);
-		glVertexAttribPointer(1, uv_vec_size, GL_FLOAT, GL_FALSE, stride, (void*)(uv_offset));
-
-		glBindVertexArray(0);
-	}
-
 	//new geometry, indexed vertices, existing texture
 	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
 		boost::shared_ptr<GLuint> existing_texture,
 		GLenum draw_type,
 		const std::vector<float> &vec_vertices,
-		const std::vector<unsigned int> &vertex_indices,
+		const std::vector<unsigned short> &vertex_indices,
 		int position_vec_size,
 		int uv_vec_size,
 		int stride,
@@ -913,7 +869,7 @@ namespace jep
 	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
 		const char* texture_path,
 		GLenum draw_type,
-		const std::vector<unsigned int> &indices,
+		const std::vector<unsigned short> &indices,
 		const std::vector<float> &vertex_data,
 		int v_data_size,
 		int vt_data_size,
@@ -927,16 +883,16 @@ namespace jep
 
 		initializeGLuints();
 
+		glGenVertexArrays(1, VAO.get());
+		glBindVertexArray(*VAO);
+
 		glGenBuffers(1, VBO.get());
 		glBindBuffer(GL_ARRAY_BUFFER, *VBO);
 		glBufferData(GL_ARRAY_BUFFER, vertex_data.size() * sizeof(float), &vertex_data[0], draw_type);
 
 		glGenBuffers(1, IND.get());
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *IND);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], draw_type);
-
-		glGenVertexArrays(1, VAO.get());
-		glBindVertexArray(*VAO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned short), &indices[0], draw_type);		
 
 		jep::loadTexture(texture_path, *TEX);
 		//TODO make the name of the texture handler variable
@@ -944,7 +900,6 @@ namespace jep
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, *TEX);
 		glUniform1i(texture_ID, 0);
-		glBindTexture(GL_TEXTURE_2D, 0);
 	
 		//TODO revise so all data exists in one buffer
 		//position
@@ -960,7 +915,13 @@ namespace jep
 		glEnableVertexAttribArray(2);
 		glVertexAttribPointer(2, vn_data_size, GL_FLOAT, GL_FALSE, stride, (void*)(normal_offset));
 
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+		glDisableVertexAttribArray(2);
+
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
 		glBindVertexArray(0);
 	}
 

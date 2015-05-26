@@ -301,22 +301,12 @@ namespace jep
 			int uv_vec_size,
 			int stride,
 			int uv_offset);
-		//new geometry, indexed vertices, new texture
-		ogl_data(boost::shared_ptr<ogl_context> context,
-			const char* texture_path,
-			GLenum draw_type,
-			const std::vector<float> &vec_vertices,
-			const std::vector<unsigned int> &indices,
-			int position_vec_size,
-			int uv_vec_size,
-			int stride,
-			int uv_offset);
 		//new geometry, indexed vertices, existing texture
 		ogl_data(boost::shared_ptr<ogl_context> context,
 			boost::shared_ptr<GLuint> existing_texture,
 			GLenum draw_type,
 			const std::vector<float> &vec_vertices,
-			const std::vector<unsigned int> &indices,
+			const std::vector<unsigned short> &indices,
 			int position_vec_size,
 			int uv_vec_size,
 			int stride,
@@ -325,7 +315,7 @@ namespace jep
 		ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
 			const char* texture_path,
 			GLenum draw_type,
-			const std::vector<unsigned int> &indices,
+			const std::vector<unsigned short> &indices,
 			const std::vector<float> &vertex_data,
 			int v_data_size,
 			int vt_data_size,
@@ -361,7 +351,7 @@ namespace jep
 		boost::shared_ptr<GLuint> TEX;
 		boost::shared_ptr<GLuint> IND;
 		bool element_array_enabled;
-		unsigned int index_count;
+		unsigned short index_count;
 		int vertex_count;
 	};
 
