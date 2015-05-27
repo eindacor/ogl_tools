@@ -337,8 +337,13 @@ namespace jep
 
 		void overrideVBO(boost::shared_ptr<GLuint> new_VBO) { VBO = new_VBO; }
 		void overrideVAO(boost::shared_ptr<GLuint> new_VAO) { VAO = new_VAO; }
-		void overrideTEX(boost::shared_ptr<GLuint> new_TEX) { TEX = new_TEX; }
-		void overrideIND(boost::shared_ptr<GLuint> new_IND) { TEX = new_IND; }
+		void overrideTEX(boost::shared_ptr<GLuint> new_TEX) { 
+			if (unique_texture)
+				glDeleteTextures(1, TEX.get());
+			TEX = new_TEX; 
+unique_texture = false; 
+		}
+		void overrideIND(boost::shared_ptr<GLuint> new_IND) { IND = new_IND; }
 
 	private:
 		void initializeGLuints() {

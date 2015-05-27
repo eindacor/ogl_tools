@@ -971,6 +971,8 @@ namespace jep
 		glDeleteBuffers(1, VBO.get());
 		glDeleteBuffers(1, IND.get());
 
+		cout << "deleted " << *IND << endl;
+
 		if (unique_texture)
 			glDeleteTextures(1, TEX.get());
 	}
@@ -980,12 +982,8 @@ namespace jep
 		int start_location_offset = animation_indices.at(current_animation).at(current_frame);
 		//TODO find way to identify how many frames/vertices belong to each animation
 		int frame_vertex_count = 0;
-		boost::shared_ptr<GLuint> temp_vao = getOGLData()->getVAO();
-		boost::shared_ptr<GLuint> temp_vbo = getOGLData()->getVBO();
-		boost::shared_ptr<GLuint> temp_tex = getOGLData()->getTEX();
-
-		glBindVertexArray(*temp_vao);
-		glBindTexture(GL_TEXTURE_2D, *temp_tex);
+		glBindVertexArray(*(getOGLData()->getVAO()));
+		glBindTexture(GL_TEXTURE_2D, *(getOGLData()->getTEX()));
 
 		camera->setMVP(context, getModelMatrix(), NORMAL);
 		glDrawArrays(GL_TRIANGLES, start_location_offset, frame_vertex_count);
@@ -1015,12 +1013,8 @@ namespace jep
 		int counter = 0;
 		for (const auto &i : character_array)
 		{
-			boost::shared_ptr<GLuint> temp_vao = i.first->getVAO();
-			boost::shared_ptr<GLuint> temp_vbo = i.first->getVBO();
-			boost::shared_ptr<GLuint> temp_tex = i.first->getTEX();
-
-			glBindVertexArray(*temp_vao);
-			glBindTexture(GL_TEXTURE_2D, *temp_tex);
+			glBindVertexArray(*(i.first->getVAO()));
+			glBindTexture(GL_TEXTURE_2D, *(i.first->getTEX()));
 	
 			//set mvp
 			glm::mat4 character_translation_matrix = i.second;
@@ -1057,12 +1051,8 @@ namespace jep
 		int counter = 0;
 		for (const auto &i : character_array)
 		{
-			boost::shared_ptr<GLuint> temp_vao = i.first->getVAO();
-			boost::shared_ptr<GLuint> temp_vbo = i.first->getVBO();
-			boost::shared_ptr<GLuint> temp_tex = i.first->getTEX();
-
-			glBindVertexArray(*temp_vao);
-			glBindTexture(GL_TEXTURE_2D, *temp_tex);
+			glBindVertexArray(*(i.first->getVAO()));
+			glBindTexture(GL_TEXTURE_2D, *(i.first->getTEX()));
 
 			//set mvp
 			glm::mat4 character_translation_matrix = i.second;
