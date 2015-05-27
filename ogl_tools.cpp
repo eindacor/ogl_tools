@@ -969,7 +969,9 @@ namespace jep
 	{
 		glDeleteVertexArrays(1, VAO.get());
 		glDeleteBuffers(1, VBO.get());
-		glDeleteBuffers(1, IND.get());
+
+		if (element_array_enabled)
+			glDeleteBuffers(1, IND.get());
 
 		cout << "deleted " << *IND << endl;
 
