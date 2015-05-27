@@ -973,8 +973,6 @@ namespace jep
 		if (element_array_enabled)
 			glDeleteBuffers(1, IND.get());
 
-		cout << "deleted " << *IND << endl;
-
 		if (unique_texture)
 			glDeleteTextures(1, TEX.get());
 	}
