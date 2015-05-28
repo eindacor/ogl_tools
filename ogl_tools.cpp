@@ -764,7 +764,7 @@ namespace jep
 	}
 
 	//new geometry, new texture
-	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
+	ogl_data::ogl_data(const boost::shared_ptr<ogl_context> &context,
 					const char* texture_path, 
 					GLenum draw_type, 
 					const std::vector<float> &vec_vertices, 
@@ -803,8 +803,8 @@ namespace jep
 	}
 
 	//new geometry, existing texture
-	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
-		boost::shared_ptr<GLuint> existing_texture,
+	ogl_data::ogl_data(const boost::shared_ptr<ogl_context> &context,
+		const boost::shared_ptr<GLuint> &existing_texture,
 		GLenum draw_type,
 		const std::vector<float> &vec_vertices,
 		int position_vec_size,
@@ -841,20 +841,21 @@ namespace jep
 	}
 
 	//new geometry, indexed vertices, new texture
-	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
+	ogl_data::ogl_data(const boost::shared_ptr<ogl_context> &context,
 		const char* texture_path,
 		GLenum draw_type,
 		const std::vector<unsigned short> &indices,
 		const std::vector<float> &vertex_data,
 		int v_data_size,
 		int vt_data_size,
-		int vn_data_size,
-		int uv_offset,
-		int normal_offset,
-		int stride)
+		int vn_data_size)
 	{
 		index_count = indices.size();
 		vertex_count = vertex_data.size();
+
+		int uv_offset = v_data_size * sizeof(float);
+		int normal_offset = uv_offset + (vt_data_size * sizeof(float));
+		int stride = normal_offset + (vn_data_size * sizeof(float));
 
 		initializeGLuints();
 		unique_texture = true;
@@ -902,20 +903,21 @@ namespace jep
 	}
 
 	//new geometry, indexed vertices, existing texture
-	ogl_data::ogl_data(boost::shared_ptr<ogl_context> context,
-		boost::shared_ptr<GLuint> existing_texture,
+	ogl_data::ogl_data(const boost::shared_ptr<ogl_context> &context,
+		const boost::shared_ptr<GLuint> &existing_texture,
 		GLenum draw_type,
 		const std::vector<unsigned short> &indices,
 		const std::vector<float> &vertex_data,
 		int v_data_size,
 		int vt_data_size,
-		int vn_data_size,
-		int uv_offset,
-		int normal_offset,
-		int stride)
+		int vn_data_size)
 	{
 		index_count = indices.size();
 		vertex_count = vertex_data.size();
+
+		int uv_offset = v_data_size * sizeof(float);
+		int normal_offset = uv_offset + (vt_data_size * sizeof(float));
+		int stride = normal_offset + (vn_data_size * sizeof(float));
 
 		initializeGLuints();
 

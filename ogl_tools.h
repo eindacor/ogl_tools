@@ -284,7 +284,7 @@ namespace jep
 	{
 	public:
 		//new geometry, new texture
-		ogl_data(boost::shared_ptr<ogl_context> context,
+		ogl_data(const boost::shared_ptr<ogl_context> &context,
 			const char* texture_path,
 			GLenum draw_type, 
 			const std::vector<float> &vec_vertices,
@@ -293,8 +293,8 @@ namespace jep
 			int stride, 
 			int uv_offset);
 		//new geometry, existing texture
-		ogl_data(boost::shared_ptr<ogl_context> context,
-			boost::shared_ptr<GLuint> existing_texture,
+		ogl_data(const boost::shared_ptr<ogl_context> &context,
+			const boost::shared_ptr<GLuint> &existing_texture,
 			GLenum draw_type,
 			const std::vector<float> &vec_vertices,
 			int position_vec_size,
@@ -302,29 +302,23 @@ namespace jep
 			int stride,
 			int uv_offset);
 		//new geometry, indexed vertices, existing texture
-		ogl_data(boost::shared_ptr<ogl_context> context,
-			boost::shared_ptr<GLuint> existing_texture,
+		ogl_data(const boost::shared_ptr<ogl_context> &context,
+			const boost::shared_ptr<GLuint> &existing_texture,
 			GLenum draw_type,
 			const std::vector<unsigned short> &indices,
 			const std::vector<float> &vertex_data,
 			int v_data_size,
 			int vt_data_size,
-			int vn_data_size,
-			int uv_offset,
-			int normal_offset,
-			int stride);
+			int vn_data_size);
 		//new geometry, indexed vertices, new texture
-		ogl_data(boost::shared_ptr<ogl_context> context,
+		ogl_data(const boost::shared_ptr<ogl_context> &context,
 			const char* texture_path,
 			GLenum draw_type,
 			const std::vector<unsigned short> &indices,
 			const std::vector<float> &vertex_data,
 			int v_data_size,
 			int vt_data_size,
-			int vn_data_size,
-			int uv_offset,
-			int normal_offset,
-			int stride);
+			int vn_data_size);
 		~ogl_data();
 
 		const int getVertexCount() const { return vertex_count; }
