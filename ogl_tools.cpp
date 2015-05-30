@@ -427,13 +427,17 @@ namespace jep
 		{
 		case NORMAL:
 			previous_model_matrix = model_matrix;
+			glUniform1i(context->getShaderGLint("use_lighting"), true);
 			MVP = projection_matrix * view_matrix * model_matrix;
 			glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
+			glUniformMatrix4fv(context->getShaderGLint("model_matrix"), 1, GL_FALSE, &model_matrix[0][0]);
+			glUniformMatrix4fv(context->getShaderGLint("view_matrix"), 1, GL_FALSE, &view_matrix[0][0]);
 			break;
 
 		case TEXT: //aspect ratio is adjusted in within the code, since aspect ratio adjustments need to be made before the objects are translated
 			previous_model_matrix = model_matrix;
 			MVP = model_matrix * aspect_scale_matrix;
+			glUniform1i(context->getShaderGLint("use_lighting"), false);
 			glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
 			break;
 
@@ -441,6 +445,7 @@ namespace jep
 			//aspect ratio is adjusted in within the code, since aspect ratio adjustments need to be made before the objects are translated
 			previous_model_matrix = model_matrix;
 			MVP = model_matrix;
+			glUniform1i(context->getShaderGLint("use_lighting"), false);
 			glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
 			break;
 
