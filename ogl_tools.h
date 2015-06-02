@@ -18,6 +18,9 @@ namespace jep
 	class ogl_context;
 	class key_handler;
 	class ogl_camera;
+	class text_handler;
+	class texture_handler;
+	enum text_justification { LL, UL, UR, LR };
 	enum render_type { NORMAL, TEXT, ABSOLUTE };
 
 	const float getLineAngle(glm::vec2 first, glm::vec2 second, bool right_handed);
@@ -335,7 +338,7 @@ namespace jep
 			if (unique_texture)
 				glDeleteTextures(1, TEX.get());
 			TEX = new_TEX; 
-unique_texture = false; 
+			unique_texture = false; 
 		}
 		void overrideIND(boost::shared_ptr<GLuint> new_IND) { IND = new_IND; }
 
@@ -450,6 +453,10 @@ unique_texture = false;
 			box_height = box_y;
 		};
 
+		static_text(string s, text_justification tj, const boost::shared_ptr<text_handler> &text,
+			const glm::vec4 &color, GLchar* text_enable_ID, GLchar* text_color_ID,
+			const glm::vec2 &on_screen_position, float scale, float box_x = -1.0f, float box_y = -1.0f);
+
 		~static_text(){};
 
 		void draw(const boost::shared_ptr<ogl_camera> &camera, const boost::shared_ptr<ogl_context> &context);
@@ -461,11 +468,19 @@ unique_texture = false;
 		glm::vec2 getUpperRight() const;
 
 	private:
+		void setPageData();
+		void setVisible();
+		string raw_text;
 		glm::vec4 text_color;
-		glm::vec4 transparency_color;
 		glm::mat4 text_scale_matrix;
-		bool transparent_background;
 		glm::mat4 text_translation_matrix;
+
+		map <int, vector<boost::shared_ptr<text_character> > >visible_lines;
+		map <int, vector< boost::shared_ptr<text_character> >::iterator > page_map;
+		float array_padding;
+		text_justification justification;
+		//TODO move lines/rectangles to ogl_tools
+		//vector< boost::shared_ptr<line> > lines;
 
 		GLchar* text_shader_ID;
 		GLchar* text_color_shader_ID;
@@ -482,9 +497,44 @@ unique_texture = false;
 		int character_count;
 	};
 
+	class text_character
+	{
+	public:
+		text_character(char character, const boost::shared_ptr<text_handler> &text, const glm::vec2 &anchor_point, text_justification tj,
+			const glm::vec2 &screen_dimensions, bool italics = false);
+		~text_character(){};
+
+		void draw(const boost::shared_ptr<ogl_context> &context, const boost::shared_ptr<ogl_camera> &camera);
+
+		void adjustPosition(glm::vec2 new_position) { position = new_position; setPositionMatrix(); }
+		void adjustDimensions(glm::vec2 new_dimensions) { dimensions = new_dimensions; setPositionMatrix(); }
+
+		glm::vec2 getLowerLeft() const { return lower_left; }
+		glm::vec2 getLowerRight() const { return lower_right; }
+		glm::vec2 getUpperLeft() const { return upper_left; }
+		glm::vec2 getUpperRight() const { return upper_right; }
+
+	private:
+		void setPositionMatrix();
+
+		glm::vec2 position;
+		glm::vec2 dimensions;
+		text_justification justification;
+		glm::mat4 position_matrix;
+
+		glm::vec2 lower_left, upper_left, upper_right, lower_right;
+
+		boost::shared_ptr<GLuint> VBO, VAO, IND, TEX;
+
+		int grid_index;
+		char c;
+	};
+
 	class text_handler
 	{
 	public:
+		text_handler(const boost::shared_ptr<ogl_context> &context,
+			const boost::shared_ptr<texture_handler> &textures, GLchar* transparent_color_shader_ID, glm::vec4 transparency_color);
 		text_handler(const boost::shared_ptr<ogl_context> &context, const char* text_image_path);
 		~text_handler(){ glDeleteTextures(1, TEX.get()); }
 
@@ -493,9 +543,12 @@ unique_texture = false;
 			GLchar* transparent_color_shader_ID, bool transparent, glm::vec2 position, float scale,
 			float box_width = -1.0f, float box_height = -1.0f);
 
+		boost::shared_ptr<ogl_data> getOGLData() const { return opengl_data; }
+
 	private:
 		map<int, boost::shared_ptr<ogl_data> > characters;
 		boost::shared_ptr<GLuint> TEX;
+		boost::shared_ptr<ogl_data> opengl_data;
 
 	};
 

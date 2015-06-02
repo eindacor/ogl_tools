@@ -1000,6 +1000,30 @@ namespace jep
 		glBindVertexArray(0);
 	}
 
+	static_text::static_text(string s, text_justification tj, const boost::shared_ptr<text_handler> &text,
+		const glm::vec4 &color, GLchar* text_enable_ID, GLchar* text_color_ID,
+		const glm::vec2 &on_screen_position, float scale, float box_x, float box_y)
+	{
+		raw_text = s;
+		text_shader_ID = text_enable_ID;
+		text_color_shader_ID = text_color_ID;
+		text_color = color;
+		text_scale_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(scale, scale, scale));
+		x_bound = (box_x > 0.0f);
+		y_bound = (box_y > 0.0f);
+		box_width = box_x;
+		box_height = box_y;
+
+		setPageData();
+
+		//TODO add code for setting text array
+	};
+
+	void static_text::setPageData()
+	{
+		
+	}
+
 	//TODO for draw functions, allow passing of a map of shader ID's with their corresponding values
 	//templatize if possible
 	void static_text::draw(const boost::shared_ptr<ogl_camera> &camera,
@@ -1099,6 +1123,147 @@ namespace jep
 		return glm::vec2(x_position, y_position);
 	}
 
+	text_character::text_character(char character, const boost::shared_ptr<text_handler> &text, const glm::vec2 &anchor_point,
+		text_justification tj, const glm::vec2 &screen_dimensions, bool italics)
+	{
+		c = character;
+		dimensions = screen_dimensions;
+		position = anchor_point;
+		justification = tj;
+
+		VAO = text->getOGLData()->getVAO();
+		VBO = text->getOGLData()->getVBO();
+		IND = text->getOGLData()->getIND();
+		TEX = text->getOGLData()->getTEX();
+
+		int grid_index = 0;
+
+		if (c == ' ')
+			grid_index = 0;
+
+		else grid_index = (int)c - 32;
+
+		if (italics)
+			grid_index += 96;
+
+		setPositionMatrix();
+	}
+
+	void text_character::setPositionMatrix()
+	{
+		float step = 1.0f / 16.0f;
+		float actual_x = (float)(grid_index % 16) * step + (0.5f * step);
+		float actual_y = (float)(grid_index / 16) * step + (0.5f * step);
+		glm::vec2 actual_centerpoint(actual_x, actual_y);
+
+		float x_scale = dimensions.x / step;
+		float y_scale = dimensions.y / step;
+
+		glm::mat4 initial_translation = glm::translate(glm::mat4(1.0f), glm::vec3(actual_centerpoint * -1.0f, 0.0f));
+		glm::mat4 scale_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(x_scale, y_scale, 1.0f));
+		glm::mat4 placement_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(position, 0.0f));
+
+		glm::mat4 justification_matrix;
+
+		switch (justification)
+		{
+		case UR:
+			lower_left = position - dimensions;
+			upper_left = position + glm::vec2(dimensions.x * -1.0f, 0.0f);
+			upper_right = position;
+			lower_right = position + glm::vec2(0.0f, dimensions.y * -1.0f);
+			justification_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(dimensions.x * -0.5f, dimensions.y * -0.5f, 0.0f));
+			break;
+		case LR:
+			lower_left = position + glm::vec2(dimensions.x * -1.0f, 0.0f);
+			upper_left = position + glm::vec2(dimensions.x * -1.0f, dimensions.y * 1.0f);
+			upper_right = position + glm::vec2(0.0f, dimensions.y * 1.0f);
+			lower_right = position;
+			justification_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(dimensions.x * -0.5f, dimensions.y * 0.5f, 0.0f));
+			break;
+		case LL:
+			lower_left = position;
+			upper_left = position + glm::vec2(0.0f, dimensions.y * 1.0f);
+			upper_right = position + dimensions;
+			lower_right = position + glm::vec2(dimensions.x * 1.0f, 0.0f);
+			justification_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(dimensions.x * 0.5f, dimensions.y * 0.5f, 0.0f));
+			break;
+		case UL:
+			lower_left = position + glm::vec2(0.0f, dimensions.y * -1.0f);
+			upper_left = position;
+			upper_right = position + glm::vec2(dimensions.x * 1.0f, 0.0f);
+			lower_right = position + glm::vec2(dimensions.x * 1.0f, dimensions.y * -1.0f);
+			justification_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(dimensions.x * 0.5f, dimensions.y * -0.5f, 0.0f));
+			break;
+
+		default:
+			justification_matrix = glm::mat4(0.0f);
+			break;
+		}
+
+		position_matrix = justification_matrix * placement_matrix * scale_matrix * initial_translation;
+	}
+
+	void text_character::draw(const boost::shared_ptr<ogl_context> &context, const boost::shared_ptr<ogl_camera> &camera)
+	{
+		glBindVertexArray(*(VAO));
+		glBindTexture(GL_TEXTURE_2D, *(TEX));
+
+		//set mvp
+		camera->setMVP(context, position_matrix, TEXT);
+
+		int offset = grid_index * 6 * sizeof(GLushort);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, (void*)offset);
+
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindVertexArray(0);
+	}
+
+	text_handler::text_handler(const boost::shared_ptr<ogl_context> &context,
+		const boost::shared_ptr<texture_handler> &textures, GLchar* transparent_color_shader_ID, glm::vec4 transparency_color)
+	{
+		//image file must be made as a 16 x 16 grid
+		float step = 1.0f / 16.0f;
+
+		TEX = textures->getTexture("text_template.bmp");
+
+		//set transparent color
+		glUniform4f(context->getShaderGLint(transparent_color_shader_ID),
+			transparency_color.x, transparency_color.y, transparency_color.z, transparency_color.w);
+
+		vector<float> vec_vertices;
+		vec_vertices.reserve(289 * 8);
+
+		for (int i = 0; i < 289; i++)
+		{
+			vector<float> vertex = {
+				(i % 17) * step, (i / 17) * step, 0.0f,				//x, y, z
+				(i % 17) * step, (i / 17) * step,					//u, v
+				0.0f, 0.0f, 1.0f									//normal
+			};
+
+			vec_vertices.insert(vec_vertices.end(), vertex.begin(), vertex.end());
+		}
+
+		vector<unsigned short> indices;
+		indices.reserve(271 * 6);
+
+		for (int i = 0; i < 271; i++)
+		{
+			if ((i + 1) % 17 != 0)
+			{
+				indices.push_back(unsigned short(i));
+				indices.push_back(unsigned short(i + 17));
+				indices.push_back(unsigned short(i + 18));
+				indices.push_back(unsigned short(i));
+				indices.push_back(unsigned short(i + 18));
+				indices.push_back(unsigned short(i + 1));
+			}
+		}
+
+		opengl_data = boost::shared_ptr<ogl_data>(new ogl_data(context, TEX, GL_STATIC_DRAW, indices, vec_vertices, 3, 2, 3));
+	}
+
 	text_handler::text_handler(const boost::shared_ptr<ogl_context> &context, const char* text_image_path)
 	{
 		//image file must be made as a 16 x 16 grid
@@ -1140,7 +1305,7 @@ namespace jep
 				uv_lower_right.x, uv_lower_right.y,
 			};
 
-			boost::shared_ptr<ogl_data> opengl_data(
+			boost::shared_ptr<ogl_data> opengl_data_(
 				new jep::ogl_data(
 				context,
 				TEX,
@@ -1152,8 +1317,8 @@ namespace jep
 				3 * sizeof(float)
 				));
 
-			opengl_data->overrideTEX(TEX);
-			characters.insert(std::pair<int, boost::shared_ptr<ogl_data> >(i, opengl_data));
+			opengl_data_->overrideTEX(TEX);
+			characters.insert(std::pair<int, boost::shared_ptr<ogl_data> >(i, opengl_data_));
 		}
 	}
 
