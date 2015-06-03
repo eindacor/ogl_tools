@@ -436,7 +436,8 @@ namespace jep
 
 		case TEXT: //aspect ratio is adjusted in within the code, since aspect ratio adjustments need to be made before the objects are translated
 			previous_model_matrix = model_matrix;
-			MVP = model_matrix * aspect_scale_matrix;
+			MVP = model_matrix;
+			//MVP = model_matrix * aspect_scale_matrix;
 			glUniform1i(context->getShaderGLint("use_lighting"), false);
 			glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
 			break;
@@ -1021,7 +1022,7 @@ namespace jep
 
 	void static_text::setPageData()
 	{
-		
+		return;
 	}
 
 	//TODO for draw functions, allow passing of a map of shader ID's with their corresponding values
@@ -1036,10 +1037,6 @@ namespace jep
 		//set text color
 		glUniform4f(context->getShaderGLint(text_color_shader_ID),
 			text_color.x, text_color.y, text_color.z, text_color.w);
-
-		//set transparent color
-		glUniform4f(context->getShaderGLint(transparent_color_shader_ID),
-			transparency_color.x, transparency_color.y, transparency_color.z, transparency_color.w);
 
 		int counter = 0;
 		for (const auto &i : character_array)
@@ -1074,10 +1071,6 @@ namespace jep
 		//set text color
 		glUniform4f(context->getShaderGLint(text_color_shader_ID),
 			text_color.x, text_color.y, text_color.z, text_color.w);
-
-		//set transparent color
-		glUniform4f(context->getShaderGLint(transparent_color_shader_ID),
-			transparency_color.x, transparency_color.y, transparency_color.z, transparency_color.w);
 
 		int counter = 0;
 		for (const auto &i : character_array)
@@ -1136,7 +1129,7 @@ namespace jep
 		IND = text->getOGLData()->getIND();
 		TEX = text->getOGLData()->getTEX();
 
-		int grid_index = 0;
+		grid_index = 0;
 
 		if (c == ' ')
 			grid_index = 0;
@@ -1209,13 +1202,32 @@ namespace jep
 		glBindVertexArray(*(VAO));
 		glBindTexture(GL_TEXTURE_2D, *(TEX));
 
-		//set mvp
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+		glEnableVertexAttribArray(2);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *(IND));
+
+		//glm::mat4 temp_position_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+		//camera->setMVP(context, temp_position_matrix, TEXT);
 		camera->setMVP(context, position_matrix, TEXT);
 
-		int offset = grid_index * 6 * sizeof(GLushort);
+		int offset = grid_index * 6 * sizeof(unsigned short);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, (void*)offset);
 
+		//draws 5 chars
+		//int offset = 36 * sizeof(unsigned short);
+		//glDrawElements(GL_TRIANGLES, 30, GL_UNSIGNED_SHORT, (void*)offset);
+
+		//prints all chars
+		//glDrawElements(GL_TRIANGLES, 1536, GL_UNSIGNED_SHORT, (void*)0);
+
 		glBindTexture(GL_TEXTURE_2D, 0);
+
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+		glDisableVertexAttribArray(2);
+
 		glBindVertexArray(0);
 	}
 
@@ -1386,6 +1398,149 @@ namespace jep
 		boost::shared_ptr<static_text> text_object(new static_text(character_array, color, trans_color, text_shader_ID, 
 			text_color_shader_ID, transparent_color_shader_ID, transparent, position, lower_right, scale, box_width, box_height));
 		return text_object;
+	}
+
+	line::line(glm::vec4 first, glm::vec4 second, glm::vec4 c)
+	{
+		p1 = first;
+		p2 = second;
+		color = c;
+
+		VAO = boost::shared_ptr<GLuint>(new GLuint);
+		VBO = boost::shared_ptr<GLuint>(new GLuint);
+
+		glGenVertexArrays(1, VAO.get());
+		glBindVertexArray(*VAO);
+		glGenBuffers(1, VBO.get());
+		glBindBuffer(GL_ARRAY_BUFFER, *VBO);
+
+		vector<float> vec_vertices{ first.x, first.y, first.z, second.x, second.y, second.z };
+
+		glBufferData(GL_ARRAY_BUFFER, vec_vertices.size() * sizeof(float), &vec_vertices[0], GL_STATIC_DRAW);
+
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+		glDisableVertexAttribArray(0);
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+
+	}
+
+	line::~line()
+	{
+		glDeleteVertexArrays(1, VAO.get());
+		glDeleteBuffers(1, VBO.get());
+	}
+
+	void line::draw(const boost::shared_ptr<ogl_context> &context, const boost::shared_ptr<ogl_camera> &camera, bool absolute) const
+	{
+		glBindVertexArray(*VAO);
+		glUniform1i(context->getShaderGLint("absolute_position"), absolute);
+
+		glUniform1i(context->getShaderGLint("color_override"), true);
+		glUniform4f(context->getShaderGLint("override_color"), color.x, color.y, color.z, color.w);
+
+		camera->setMVP(context, glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f)), 
+			(absolute ? ABSOLUTE : NORMAL));
+
+		glEnableVertexAttribArray(0);
+		glDrawArrays(GL_LINES, 0, 2);
+		glDisableVertexAttribArray(0);
+
+		glUniform1i(context->getShaderGLint("color_override"), false);
+		glUniform1i(context->getShaderGLint("absolute_position"), false);
+
+		glBindVertexArray(0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+
+	rectangle::rectangle(glm::vec2 centerpoint, glm::vec2 dimensions, glm::vec4 c)
+	{
+		float half_width = dimensions.x / 2.0f;
+		float half_height = dimensions.y / 2.0f;
+
+		glm::vec2 upper_left(centerpoint.x - half_width, centerpoint.y + half_height);
+		glm::vec2 upper_right(centerpoint.x + half_width, centerpoint.y + half_height);
+		glm::vec2 lower_left(centerpoint.x - half_width, centerpoint.y - half_height);
+		glm::vec2 lower_right(centerpoint.x + half_width, centerpoint.y - half_height);
+
+		vec_vertices = vector < float > {
+			lower_left.x, lower_left.y, 0.0f,
+				upper_left.x, upper_left.y, 0.0f,
+				upper_right.x, upper_right.y, 0.0f,
+				lower_left.x, lower_left.y, 0.0f,
+				upper_right.x, upper_right.y, 0.0f,
+				lower_right.x, lower_right.y, 0.0f
+		};
+
+		color = c;
+
+		VAO = boost::shared_ptr<GLuint>(new GLuint);
+		VBO = boost::shared_ptr<GLuint>(new GLuint);
+
+		glGenVertexArrays(1, VAO.get());
+		glBindVertexArray(*VAO);
+		glGenBuffers(1, VBO.get());
+		glBindBuffer(GL_ARRAY_BUFFER, *VBO);
+
+		glBufferData(GL_ARRAY_BUFFER, vec_vertices.size() * sizeof(float), &vec_vertices[0], GL_STATIC_DRAW);
+
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+		glDisableVertexAttribArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
+
+	rectangle::~rectangle()
+	{
+		glDeleteVertexArrays(1, VAO.get());
+		glDeleteBuffers(1, VBO.get());
+	}
+
+	void rectangle::draw(const boost::shared_ptr<ogl_context> &context, const boost::shared_ptr<ogl_camera> &camera, bool absolute) const
+	{
+		glBindVertexArray(*VAO);
+		glUniform1i(context->getShaderGLint("absolute_position"), absolute);
+
+		glUniform1i(context->getShaderGLint("color_override"), true);
+		glUniform4f(context->getShaderGLint("override_color"), color.x, color.y, color.z, color.w);
+
+		camera->setMVP(context, glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f)), 
+			(absolute ? ABSOLUTE : NORMAL));
+
+		glEnableVertexAttribArray(0);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glDisableVertexAttribArray(0);
+
+		glUniform1i(context->getShaderGLint("color_override"), false);
+		glUniform1i(context->getShaderGLint("absolute_position"), false);
+
+		glBindVertexArray(0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+
+	void rectangle::draw(const boost::shared_ptr<ogl_context> &context, const boost::shared_ptr<ogl_camera> &camera,
+		const glm::mat4 &model_matrix, bool absolute) const
+	{
+		glBindVertexArray(*VAO);
+		glUniform1i(context->getShaderGLint("absolute_position"), absolute);
+
+		glUniform1i(context->getShaderGLint("color_override"), true);
+		glUniform4f(context->getShaderGLint("override_color"), color.x, color.y, color.z, color.w);
+
+		camera->setMVP(context, model_matrix, (absolute ? (render_type)2 : (render_type)0));
+
+		glEnableVertexAttribArray(0);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glDisableVertexAttribArray(0);
+
+		glUniform1i(context->getShaderGLint("color_override"), false);
+		glUniform1i(context->getShaderGLint("absolute_position"), false);
+
+		glBindVertexArray(0);
+		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 }
 

@@ -20,6 +20,7 @@ namespace jep
 	class ogl_camera;
 	class text_handler;
 	class texture_handler;
+	class text_character;
 	enum text_justification { LL, UL, UR, LR };
 	enum render_type { NORMAL, TEXT, ABSOLUTE };
 
@@ -439,10 +440,7 @@ namespace jep
 		{
 			text_shader_ID = text_ID;
 			text_color_shader_ID = text_color_ID;
-			transparent_color_shader_ID = transparent_color_ID;
 			text_color = color;
-			transparency_color = trans_color;
-			transparent_background = transparent;
 			text_scale_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(scale, scale, scale));
 			text_translation_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(upper_left_position.x, upper_left_position.y, 0.0f));
 			upper_left = upper_left_position;
@@ -533,8 +531,9 @@ namespace jep
 	class text_handler
 	{
 	public:
-		text_handler(const boost::shared_ptr<ogl_context> &context,
-			const boost::shared_ptr<texture_handler> &textures, GLchar* transparent_color_shader_ID, glm::vec4 transparency_color);
+		text_handler(const boost::shared_ptr<ogl_context> &context, const boost::shared_ptr<texture_handler> &textures, 
+			GLchar* transparent_color_shader_ID, glm::vec4 transparency_color);
+		//old constructor
 		text_handler(const boost::shared_ptr<ogl_context> &context, const char* text_image_path);
 		~text_handler(){ glDeleteTextures(1, TEX.get()); }
 
@@ -590,6 +589,46 @@ namespace jep
 	private:
 		std::map<string, boost::shared_ptr<GLuint> > textures;
 		string default_file_path;
+	};
+
+	class line
+	{
+	public:
+		line(glm::vec4 first, glm::vec4 second, glm::vec4 c);
+		~line();
+
+		void moveFirstRelative(glm::mat4 translation) { p1 = translation * p1; }
+		void moveFirstAbsolute(glm::vec4 new_point) { p1 = new_point; }
+		void moveSecondRelative(glm::mat4 translation) { p2 = translation * p2; }
+		void moveSecondAbsolute(glm::vec4 new_point) { p2 = new_point; }
+
+		void draw(const boost::shared_ptr<ogl_context> &context, const boost::shared_ptr<ogl_camera> &camera, bool absolute = false) const;
+
+	private:
+		glm::vec4 p1;
+		glm::vec4 p2;
+
+		boost::shared_ptr<GLuint> VBO;
+		boost::shared_ptr<GLuint> VAO;
+		glm::vec4 color;
+	};
+
+	class rectangle
+	{
+	public:
+		rectangle(glm::vec2 centerpoint, glm::vec2 dimensions, glm::vec4 c);
+		~rectangle();
+
+		void draw(const boost::shared_ptr<ogl_context> &context, const boost::shared_ptr<ogl_camera> &camera, bool absolute = false) const;
+		void draw(const boost::shared_ptr<ogl_context> &context, const boost::shared_ptr<ogl_camera> &camera,
+			const glm::mat4 &model_matrix, bool absolute = false) const;
+		void setColor(glm::vec4 c) { color = c; }
+
+	private:
+		vector<float> vec_vertices;
+		boost::shared_ptr<GLuint> VBO;
+		boost::shared_ptr<GLuint> VAO;
+		glm::vec4 color;
 	};
 }
 
