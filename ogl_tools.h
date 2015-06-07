@@ -512,6 +512,8 @@ namespace jep
 		glm::vec2 getUpperLeft() const { return upper_left; }
 		glm::vec2 getUpperRight() const { return upper_right; }
 
+		void switchFont(const boost::shared_ptr<GLuint> &new_TEX) { TEX = new_TEX; }
+
 	private:
 		void setPositionMatrix();
 
@@ -531,24 +533,19 @@ namespace jep
 	class text_handler
 	{
 	public:
-		text_handler(const boost::shared_ptr<ogl_context> &context, const boost::shared_ptr<texture_handler> &textures, 
+		text_handler(const boost::shared_ptr<ogl_context> &context, const boost::shared_ptr<GLuint> &TEX,
 			GLchar* transparent_color_shader_ID, glm::vec4 transparency_color);
-		//old constructor
-		text_handler(const boost::shared_ptr<ogl_context> &context, const char* text_image_path);
-		~text_handler(){ glDeleteTextures(1, TEX.get()); }
-
-		boost::shared_ptr<static_text> getTextArray(std::string s, const boost::shared_ptr<ogl_context> &context, 
-			bool italics, glm::vec4 color, glm::vec4 trans_color, GLchar* text_shader_ID, GLchar* text_color_shader_ID,
-			GLchar* transparent_color_shader_ID, bool transparent, glm::vec2 position, float scale,
-			float box_width = -1.0f, float box_height = -1.0f);
+		~text_handler();
 
 		boost::shared_ptr<ogl_data> getOGLData() const { return opengl_data; }
+		void addFont(string font_name, const char* text_image_path);
+		void switchFont(string font_name);
 
 	private:
-		map<int, boost::shared_ptr<ogl_data> > characters;
-		boost::shared_ptr<GLuint> TEX;
+		boost::shared_ptr<GLuint> default_TEX;
 		boost::shared_ptr<ogl_data> opengl_data;
 
+		map<string, boost::shared_ptr<GLuint> > font_map;
 	};
 
 	class texture_handler

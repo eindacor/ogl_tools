@@ -1208,19 +1208,10 @@ namespace jep
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *(IND));
 
-		//glm::mat4 temp_position_matrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
-		//camera->setMVP(context, temp_position_matrix, TEXT);
 		camera->setMVP(context, position_matrix, TEXT);
 
 		int offset = grid_index * 6 * sizeof(unsigned short);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, (void*)offset);
-
-		//draws 5 chars
-		//int offset = 36 * sizeof(unsigned short);
-		//glDrawElements(GL_TRIANGLES, 30, GL_UNSIGNED_SHORT, (void*)offset);
-
-		//prints all chars
-		//glDrawElements(GL_TRIANGLES, 1536, GL_UNSIGNED_SHORT, (void*)0);
 
 		glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -1232,12 +1223,12 @@ namespace jep
 	}
 
 	text_handler::text_handler(const boost::shared_ptr<ogl_context> &context,
-		const boost::shared_ptr<texture_handler> &textures, GLchar* transparent_color_shader_ID, glm::vec4 transparency_color)
+		const boost::shared_ptr<GLuint> &TEX, GLchar* transparent_color_shader_ID, glm::vec4 transparency_color)
 	{
 		//image file must be made as a 16 x 16 grid
 		float step = 1.0f / 16.0f;
 
-		TEX = textures->getTexture("text_template.bmp");
+		default_TEX = TEX;
 
 		//set transparent color
 		glUniform4f(context->getShaderGLint(transparent_color_shader_ID),
@@ -1273,131 +1264,34 @@ namespace jep
 			}
 		}
 
-		opengl_data = boost::shared_ptr<ogl_data>(new ogl_data(context, TEX, GL_STATIC_DRAW, indices, vec_vertices, 3, 2, 3));
+		opengl_data = boost::shared_ptr<ogl_data>(new ogl_data(context, default_TEX, GL_STATIC_DRAW, indices, vec_vertices, 3, 2, 3));
 	}
 
-	text_handler::text_handler(const boost::shared_ptr<ogl_context> &context, const char* text_image_path)
-	{
-		//image file must be made as a 16 x 16 grid
-		float uv_step = 1.0f / 16.0f;
+	text_handler::~text_handler()
+	{ 
+		glDeleteTextures(1, default_TEX.get()); 
 
-		TEX = boost::shared_ptr<GLuint>(new GLuint);
-		jep::loadTexture(text_image_path, *TEX);
-
-		for (int i = 0; i < 256; i++)
-		{
-			int u_index = i % 16;
-			int v_index = i / 16;
-
-			float u_offset = (float)u_index * uv_step;
-			float v_offset = (float)v_index * uv_step;
-
-			glm::vec2 uv_lower_left(u_offset, v_offset);
-			glm::vec2 uv_upper_left(u_offset, v_offset + uv_step);
-			glm::vec2 uv_upper_right(u_offset + uv_step, v_offset + uv_step);
-			glm::vec2 uv_lower_right(u_offset + uv_step, v_offset);
-
-			glm::vec4 xy_lower_left(0.0f, -1.0f, 0.0f, 1.0f);
-			glm::vec4 xy_upper_left(0.0f, 0.0f, 0.0f, 1.0f);
-			glm::vec4 xy_upper_right(1.0f, 0.0f, 0.0f, 1.0f);
-			glm::vec4 xy_lower_right(1.0f, -1.0f, 0.0f, 1.0f);
-
-			vector<float> character_vertices{
-				xy_lower_left.x, xy_lower_left.y, 0.0f,
-				uv_lower_left.x, uv_lower_left.y,
-				xy_upper_left.x, xy_upper_left.y, 0.0f,
-				uv_upper_left.x, uv_upper_left.y,
-				xy_upper_right.x, xy_upper_right.y, 0.0f,
-				uv_upper_right.x, uv_upper_right.y,
-				xy_lower_left.x, xy_lower_left.y, 0.0f,
-				uv_lower_left.x, uv_lower_left.y,
-				xy_upper_right.x, xy_upper_right.y, 0.0f,
-				uv_upper_right.x, uv_upper_right.y,
-				xy_lower_right.x, xy_lower_right.y, 0.0f,
-				uv_lower_right.x, uv_lower_right.y,
-			};
-
-			boost::shared_ptr<ogl_data> opengl_data_(
-				new jep::ogl_data(
-				context,
-				TEX,
-				GL_STATIC_DRAW,
-				character_vertices,
-				3,
-				2,
-				5 * sizeof(float),
-				3 * sizeof(float)
-				));
-
-			opengl_data_->overrideTEX(TEX);
-			characters.insert(std::pair<int, boost::shared_ptr<ogl_data> >(i, opengl_data_));
-		}
+		for (auto &tex : font_map)
+			glDeleteTextures(1, tex.second.get());
 	}
 
-	boost::shared_ptr<static_text> text_handler::getTextArray(std::string s, const boost::shared_ptr<ogl_context> &context, 
-		bool italics, glm::vec4 color, glm::vec4 trans_color, GLchar* text_shader_ID, GLchar* text_color_shader_ID,
-		GLchar* transparent_color_shader_ID, bool transparent, glm::vec2 position, float scale, float box_width, float box_height)
+	void text_handler::addFont(string font_name, const char* text_image_path)
 	{
-		float actual_max_width = (box_width / scale) * context->getAspectRatio();
-		int max_line_length(actual_max_width);
+		if (font_map.find(font_name) == font_map.end())
+			font_map[font_name] = boost::shared_ptr<GLuint>(new GLuint);
 
-		bool x_bound(box_width > 0);
-		bool y_bound(box_height > 0);
+		jep::loadTexture(text_image_path, *font_map.at(font_name));
+	}
 
-		std::vector< std::pair<boost::shared_ptr<ogl_data>, glm::mat4> > character_array;
-		character_array.reserve(s.size());
-
-		//TODO modify so characters are offset by a specific spacing according to character
-		int line_character_index = 0;
-		int line_index = 0;
-		int longest_line = 0;
-
-		float total_width = 0;
-		float total_height = 0;
-		
-		for (const auto &i : s)
+	void text_handler::switchFont(string font_name)
+	{
+		if (font_map.find(font_name) != font_map.end())
 		{
-			if (i == '\n' || (x_bound && line_character_index >= max_line_length))
-			{
-				line_index++;
-				line_character_index = 0;
+			opengl_data->overrideTEX(font_map.at(font_name));
 
-				if (i == '\n')
-					continue;
-			}
-
-			if (y_bound && line_index >= (int)box_height)
-				break;
-
-			int index = 0;
-
-			if (i == ' ')
-				index = 0;
-
-			else index = (int)i - 32;
-
-			if (italics)
-				index += 96;
-
-			float x_offset = (float)line_character_index * 0.5f;
-			float y_offset = (float)line_index * -1.0f;
-
-			glm::mat4 translation_matrix(glm::translate(glm::mat4(1.0f), glm::vec3(x_offset, y_offset, 0.0f)));
-			character_array.push_back(std::pair<boost::shared_ptr<ogl_data>, glm::mat4>(characters.at(index), translation_matrix));
-
-			if (line_character_index >= longest_line)
-				longest_line = line_character_index + 1;
-			line_character_index++;
+			//for (auto &character : characters)
+				//character.second->overrideTEX(font_map.at(font_name));
 		}
-		
-		float actual_width = ((float)longest_line * scale) * context->getAspectRatio();
-		float actual_height = ((float)line_index + 1.0f) * scale;
-
-		glm::vec2 lower_right(position.x + actual_width, position.y - actual_height);
-
-		boost::shared_ptr<static_text> text_object(new static_text(character_array, color, trans_color, text_shader_ID, 
-			text_color_shader_ID, transparent_color_shader_ID, transparent, position, lower_right, scale, box_width, box_height));
-		return text_object;
 	}
 
 	line::line(glm::vec4 first, glm::vec4 second, glm::vec4 c)
