@@ -1294,6 +1294,76 @@ namespace jep
 		}
 	}
 
+	texture_handler::~texture_handler()
+	{
+		for (auto i : textures)
+		{
+			if (i.second != nullptr)
+				glDeleteTextures(1, i.second.get());
+		}		
+	}
+
+	boost::shared_ptr<GLuint> texture_handler::addTexture(string file_name)
+	{
+		string full_path = default_file_path + "\\" + file_name;
+		boost::shared_ptr<GLuint> new_texture(new GLuint);
+		jep::loadTexture(full_path.c_str(), *new_texture);
+		textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, new_texture));
+		file_paths.insert(std::pair<string, string>(file_name, full_path));
+		return textures.at(file_name);
+	}
+
+	boost::shared_ptr<GLuint> texture_handler::addTexture(string file_name, string file_path)
+	{
+		boost::shared_ptr<GLuint> new_texture(new GLuint);
+		jep::loadTexture(file_path.c_str(), *new_texture);
+		textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, new_texture));
+		file_paths.insert(std::pair<string, string>(file_name, file_path));
+		return textures.at(file_name);
+	}
+
+	boost::shared_ptr<GLuint> texture_handler::getTexture(string name)
+	{
+		if (textures.find(name) == textures.end())
+		{
+			cout << name << " was not added to the texture handler" << endl;
+			return nullptr;
+		}
+
+		else if (textures.at(name) == nullptr)
+		{
+			string full_path = file_paths.at(name);
+			jep::loadTexture(full_path.c_str(), *textures.at(name));
+		}
+
+		return textures.at(name);
+	}
+
+	void texture_handler::addTextureUnloaded(string file_name, string file_path)
+	{
+		textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, nullptr));
+		file_paths.insert(std::pair<string, string>(file_name, file_path));
+	}
+
+	void texture_handler::addTextureUnloaded(string file_name)
+	{
+		string full_path = default_file_path + "\\" + file_name;
+		textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, nullptr));
+		file_paths.insert(std::pair<string, string>(file_name, full_path));
+	}
+
+	void texture_handler::unloadTexture(string name)
+	{
+		if (textures.find(name) == textures.end())
+			cout << name << " was not added to the texture handler" << endl;
+
+		else
+		{
+			glDeleteTextures(1, textures.at(name).get());
+			textures.at(name) = nullptr;
+		}
+	}
+
 	line::line(glm::vec4 first, glm::vec4 second, glm::vec4 c)
 	{
 		p1 = first;

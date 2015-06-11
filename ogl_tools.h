@@ -552,39 +552,21 @@ namespace jep
 	{
 	public:
 		texture_handler(string default_path){ default_file_path = default_path; }
-		~texture_handler()
-		{
-			for (auto i : textures)
-				glDeleteTextures(1, i.second.get());
-		}
+		~texture_handler();
 
-		boost::shared_ptr<GLuint> addTexture(string file_name)
-		{
-			string full_path = default_file_path + "\\" + file_name;
-			boost::shared_ptr<GLuint> new_texture(new GLuint);
-			jep::loadTexture(full_path.c_str(), *new_texture);
-			textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, new_texture));
-			return textures.at(file_name);
-		}
+		boost::shared_ptr<GLuint> addTexture(string file_name);
+		boost::shared_ptr<GLuint> addTexture(string file_name, string file_path);
+		boost::shared_ptr<GLuint> getTexture(string name);
 
-		boost::shared_ptr<GLuint> addTexture(string file_name, string file_path)
-		{
-			boost::shared_ptr<GLuint> new_texture(new GLuint);
-			jep::loadTexture(file_path.c_str(), *new_texture);
-			textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, new_texture));
-			return textures.at(file_name);
-		}
-
-		boost::shared_ptr<GLuint> getTexture(string name)
-		{
-			if (textures.find(name) == textures.end())
-				return nullptr;
-
-			return textures.at(name);
-		}
+		void addTextureUnloaded(string file_name, string file_path);
+		void addTextureUnloaded(string file_name);
+		void unloadTexture(string name);
 
 	private:
+		//filename, GLuint
 		std::map<string, boost::shared_ptr<GLuint> > textures;
+		//filename, file path
+		std::map<string, string > file_paths;
 		string default_file_path;
 	};
 
