@@ -394,6 +394,7 @@ namespace jep
 		camera_focus = focus;
 		camera_position = position;
 		aspect_scale = (float)context->getWindowWidth() / (float)context->getWindowHeight();
+		current_render_type = UNDEFINED;
 
 		keys = kh;
 		view_matrix = glm::lookAt(
@@ -417,8 +418,10 @@ namespace jep
 
 	void ogl_camera::setMVP(const boost::shared_ptr<ogl_context> &context, const glm::mat4 &model_matrix, const render_type &rt)
 	{
-		if (current_render_type == rt && model_matrix == previous_model_matrix)
+
+		if (current_render_type == rt && model_matrix == previous_model_matrix && previous_view_matrix == view_matrix) {
 			return;
+		}
 
 		current_render_type = rt;
 		glm::mat4 MVP;
@@ -427,6 +430,7 @@ namespace jep
 		{
 		case NORMAL:
 			previous_model_matrix = model_matrix;
+			previous_view_matrix = view_matrix;
 			glUniform1i(context->getShaderGLint("use_lighting"), true);
 			MVP = projection_matrix * view_matrix * model_matrix;
 			glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
@@ -436,6 +440,7 @@ namespace jep
 
 		case TEXT: //aspect ratio is adjusted in within the code, since aspect ratio adjustments need to be made before the objects are translated
 			previous_model_matrix = model_matrix;
+			previous_view_matrix = view_matrix;
 			MVP = model_matrix;
 			//MVP = model_matrix * aspect_scale_matrix;
 			glUniform1i(context->getShaderGLint("use_lighting"), false);
@@ -445,6 +450,7 @@ namespace jep
 		case ABSOLUTE:
 			//aspect ratio is adjusted in within the code, since aspect ratio adjustments need to be made before the objects are translated
 			previous_model_matrix = model_matrix;
+			previous_view_matrix = view_matrix;
 			MVP = model_matrix;
 			glUniform1i(context->getShaderGLint("use_lighting"), false);
 			glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
@@ -581,6 +587,9 @@ namespace jep
 			move_forward = true;
 
 		move_backward = !move_forward;
+
+		if (print_movement)
+			cout << "move: " << n << endl;
 	}
 
 	void ogl_camera_free::rotate(signed short n)
@@ -599,6 +608,9 @@ namespace jep
 			rotate_left = false;
 
 		rotate_right = !rotate_left;
+
+		if (print_movement)
+			cout << "rotate: " << n << endl;
 	}
 
 	void ogl_camera_free::tilt(signed short n)
@@ -617,6 +629,9 @@ namespace jep
 			tilt_up = true;
 
 		tilt_down = !tilt_up;
+
+		if (print_movement)
+			cout << "tilt: " << n << endl;
 	}
 
 	void ogl_camera_free::strafe(signed short n)
@@ -635,47 +650,30 @@ namespace jep
 			strafe_left = false;
 
 		strafe_right = !strafe_left;
+
+		if (print_movement)
+			cout << "strafe: " << n << endl;
 	}
 
 	void ogl_camera_free::updateCamera()
 	{
 		if (getKeys()->checkPress(GLFW_KEY_A) || getKeys()->checkPress(GLFW_KEY_D))
-		{
-			if (getKeys()->checkPress(GLFW_KEY_D))
-				strafe(1);
-
-			else strafe(-1);
-		}
+			getKeys()->checkPress(GLFW_KEY_D) ? strafe(1) : strafe(-1);
 
 		else strafe(0);
 
 		if (getKeys()->checkPress(GLFW_KEY_S) || getKeys()->checkPress(GLFW_KEY_W))
-		{
-			if (getKeys()->checkPress(GLFW_KEY_S))
-				move(-1);
-
-			else move(1);
-		}
+			getKeys()->checkPress(GLFW_KEY_S) ? move(-1) : move(1);
 
 		else move(0);
 
 		if (getKeys()->checkPress(GLFW_KEY_UP) || getKeys()->checkPress(GLFW_KEY_DOWN))
-		{
-			if (getKeys()->checkPress(GLFW_KEY_UP))
-				tilt(1);
-
-			else tilt(-1);
-		}
+			getKeys()->checkPress(GLFW_KEY_UP) ? tilt(1) : tilt(-1);
 
 		else tilt(0);
 
 		if (getKeys()->checkPress(GLFW_KEY_LEFT) || getKeys()->checkPress(GLFW_KEY_RIGHT))
-		{
-			if (getKeys()->checkPress(GLFW_KEY_LEFT))
-				rotate(1);
-
-			else rotate(-1);
-		}
+			getKeys()->checkPress(GLFW_KEY_LEFT) ? rotate(1) : rotate(-1);
 
 		else rotate(0);
 
@@ -772,6 +770,7 @@ namespace jep
 	//new geometry, new texture
 	ogl_data::ogl_data(const boost::shared_ptr<ogl_context> &context,
 					const char* texture_path, 
+					const char* normal_path,
 					GLenum draw_type, 
 					const std::vector<float> &vec_vertices, 
 					int position_vec_size, 
@@ -793,11 +792,24 @@ namespace jep
 
 		jep::loadTexture(texture_path, *TEX);
 		//TODO make the name of the texture handler variable
-		GLuint texture_ID = context->getShaderGLint("myTextureSampler");
+		GLuint texture_ID = context->getShaderGLint("diffuseMap");
+
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, *TEX);
 		glUniform1i(texture_ID, 0);
-		glBindTexture(GL_TEXTURE_2D, 0);
+
+		//TEST
+		if (normal_path != nullptr)
+		{
+			jep::loadTexture(normal_path, *NOR);
+			//TODO make the name of the texture handler variable
+			GLuint normal_ID = context->getShaderGLint("normalMap");
+
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, *NOR);
+			glUniform1i(normal_ID, 0);
+		}
+		//TEST
 
 		glEnableVertexAttribArray(0);
 		glEnableVertexAttribArray(1);
@@ -811,6 +823,7 @@ namespace jep
 	//new geometry, existing texture
 	ogl_data::ogl_data(const boost::shared_ptr<ogl_context> &context,
 		const boost::shared_ptr<GLuint> &existing_texture,
+		const boost::shared_ptr<GLuint> &existing_normal,
 		GLenum draw_type,
 		const std::vector<float> &vec_vertices,
 		int position_vec_size,
@@ -820,6 +833,7 @@ namespace jep
 	{
 		initializeGLuints();
 		TEX = existing_texture;
+		NOR = existing_normal;
 		unique_texture = false;
 		element_array_enabled = false;
 		vertex_count = vec_vertices.size();
@@ -831,7 +845,7 @@ namespace jep
 		glGenVertexArrays(1, VAO.get());
 		glBindVertexArray(*VAO);
 
-		GLuint texture_ID = context->getShaderGLint("myTextureSampler");
+		GLuint texture_ID = context->getShaderGLint("diffuseMap");
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, *TEX);
 		glUniform1i(texture_ID, 0);
@@ -849,6 +863,7 @@ namespace jep
 	//new geometry, indexed vertices, new texture
 	ogl_data::ogl_data(const boost::shared_ptr<ogl_context> &context,
 		const char* texture_path,
+		const char* normal_path,
 		GLenum draw_type,
 		const std::vector<unsigned short> &indices,
 		const std::vector<float> &vertex_data,
@@ -879,10 +894,24 @@ namespace jep
 
 		jep::loadTexture(texture_path, *TEX);
 		//TODO make the name of the texture handler variable
-		GLuint texture_ID = context->getShaderGLint("myTextureSampler");
+		GLuint texture_ID = context->getShaderGLint("diffuseMap");
+
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, *TEX);
 		glUniform1i(texture_ID, 0);
+
+		//TEST
+		if (normal_path != nullptr)
+		{
+			jep::loadTexture(normal_path, *NOR);
+			//TODO make the name of the texture handler variable
+			GLuint normal_ID = context->getShaderGLint("normalMap");
+
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, *NOR);
+			glUniform1i(normal_ID, 0);
+		}
+		//TEST
 	
 		//TODO revise so all data exists in one buffer
 		//position
@@ -911,13 +940,17 @@ namespace jep
 	//new geometry, indexed vertices, existing texture
 	ogl_data::ogl_data(const boost::shared_ptr<ogl_context> &context,
 		const boost::shared_ptr<GLuint> &existing_texture,
+		const boost::shared_ptr<GLuint> &existing_normal,
+		const boost::shared_ptr<GLuint> &existing_bump,
 		GLenum draw_type,
 		const std::vector<unsigned short> &indices,
 		const std::vector<float> &vertex_data,
 		int v_data_size,
 		int vt_data_size,
-		int vn_data_size)
+		int vn_data_size,
+		float bump_value)
 	{
+		bump_intensity = bump_value;
 		index_count = indices.size();
 		vertex_count = vertex_data.size();
 
@@ -928,17 +961,40 @@ namespace jep
 		initializeGLuints();
 
 		TEX = existing_texture;
+		NOR = existing_normal;
+		BUM = existing_bump;
 		unique_texture = false;
 		element_array_enabled = true;
 
 		glGenVertexArrays(1, VAO.get());
 		glBindVertexArray(*VAO);
 
-		GLuint texture_ID = context->getShaderGLint("myTextureSampler");
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, *TEX);
-		glUniform1i(texture_ID, 0);
-		glBindTexture(GL_TEXTURE_2D, 0);
+		if (TEX.get())
+		{
+			GLuint texture_ID = context->getShaderGLint("diffuseMap");
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, *TEX);
+			glUniform1i(texture_ID, 0);
+		}
+
+		if (NOR.get())
+		{
+			GLuint normal_ID = context->getShaderGLint("normalMap");
+
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, *NOR);
+			glUniform1i(normal_ID, 1);
+		}
+
+		if (BUM.get())
+		{
+			GLuint bump_ID = context->getShaderGLint("bumpMap");
+
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_2D, *BUM);
+			glUniform1i(bump_ID, 2);
+		}
 
 		glGenBuffers(1, VBO.get());
 		glBindBuffer(GL_ARRAY_BUFFER, *VBO);
@@ -1264,7 +1320,17 @@ namespace jep
 			}
 		}
 
-		opengl_data = boost::shared_ptr<ogl_data>(new ogl_data(context, default_TEX, GL_STATIC_DRAW, indices, vec_vertices, 3, 2, 3));
+		opengl_data = boost::shared_ptr<ogl_data>(new ogl_data(
+			context, 
+			default_TEX, 
+			nullptr, 
+			nullptr,
+			GL_STATIC_DRAW, 
+			indices, 
+			vec_vertices, 
+			3, 
+			2, 
+			3));
 	}
 
 	text_handler::~text_handler()
@@ -1319,6 +1385,13 @@ namespace jep
 		jep::loadTexture(file_path.c_str(), *new_texture);
 		textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, new_texture));
 		file_paths.insert(std::pair<string, string>(file_name, file_path));
+
+		cout << "\"" << file_name << "\" has been added to the texture handler: " << endl;
+		for (auto texture_filename : textures)
+		{
+			cout << int(*(texture_filename.second)) << ": " << texture_filename.first << endl;
+		}
+
 		return textures.at(file_name);
 	}
 
@@ -1326,7 +1399,7 @@ namespace jep
 	{
 		if (textures.find(name) == textures.end())
 		{
-			cout << name << " was not added to the texture handler" << endl;
+			cout << "\"" << name << "\" was not added to the texture handler" << endl;
 			return nullptr;
 		}
 

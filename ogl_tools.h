@@ -22,7 +22,7 @@ namespace jep
 	class texture_handler;
 	class text_character;
 	enum text_justification { LL, UL, UR, LR };
-	enum render_type { NORMAL, TEXT, ABSOLUTE };
+	enum render_type { NORMAL, TEXT, ABSOLUTE, UNDEFINED };
 
 	const float getLineAngle(glm::vec2 first, glm::vec2 second, bool right_handed);
 	const glm::vec4 rotatePointAroundOrigin(const glm::vec4 &point, const glm::vec4 &origin, const float degrees, const glm::vec3 &axis);
@@ -48,6 +48,13 @@ namespace jep
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); glUseProgram(program_ID);
 		}
 		void swapBuffers() const { glfwSwapBuffers(window); }
+		void enableTextureMap() { glUniform1i(getShaderGLint("enable_texture"), GLint(1)); }
+		void disableTextureMap() { glUniform1i(getShaderGLint("enable_texture"), GLint(0)); }
+		void enableBumpMap(float f) { glUniform1i(getShaderGLint("enable_bump"), GLint(1)); glUniform1f(getShaderGLint("bump_value"), GLfloat(f)); }
+		void disableBumpMap() { glUniform1i(getShaderGLint("enable_bump"), GLint(0)); }
+		void enableNormalMap() { glUniform1i(getShaderGLint("enable_normal"), GLint(1)); }
+		void disableNormalMap() { glUniform1i(getShaderGLint("enable_normal"), GLint(0)); }
+
 
 		const GLuint getProgramID() const { return program_ID; }
 		const float getAspectRatio() const { return aspect_ratio; }
@@ -105,6 +112,7 @@ namespace jep
 		glm::mat4 view_matrix;
 		glm::mat4 projection_matrix;
 		glm::mat4 previous_model_matrix;
+		glm::mat4 previous_view_matrix;
 		glm::mat4 aspect_scale_matrix;
 		boost::shared_ptr<key_handler> keys;
 		float aspect_scale;
@@ -198,7 +206,7 @@ namespace jep
 		bool tilt_down;
 		bool strafe_left;
 		bool strafe_right;
-		bool print_movement;
+		bool print_movement = false;
 	};
 
 	class ogl_camera_iso : public ogl_camera
@@ -290,6 +298,7 @@ namespace jep
 		//new geometry, new texture
 		ogl_data(const boost::shared_ptr<ogl_context> &context,
 			const char* texture_path,
+			const char* normal_path,
 			GLenum draw_type, 
 			const std::vector<float> &vec_vertices,
 			int position_vec_size, 
@@ -299,6 +308,7 @@ namespace jep
 		//new geometry, existing texture
 		ogl_data(const boost::shared_ptr<ogl_context> &context,
 			const boost::shared_ptr<GLuint> &existing_texture,
+			const boost::shared_ptr<GLuint> &existing_normal,
 			GLenum draw_type,
 			const std::vector<float> &vec_vertices,
 			int position_vec_size,
@@ -308,6 +318,7 @@ namespace jep
 		//new geometry, indexed vertices, existing texture
 		ogl_data(const boost::shared_ptr<ogl_context> &context,
 			const boost::shared_ptr<GLuint> &existing_texture,
+			const boost::shared_ptr<GLuint> &existing_normal,
 			GLenum draw_type,
 			const std::vector<unsigned short> &indices,
 			const std::vector<float> &vertex_data,
@@ -317,29 +328,61 @@ namespace jep
 		//new geometry, indexed vertices, new texture
 		ogl_data(const boost::shared_ptr<ogl_context> &context,
 			const char* texture_path,
+			const char* normal_path,
 			GLenum draw_type,
 			const std::vector<unsigned short> &indices,
 			const std::vector<float> &vertex_data,
 			int v_data_size,
 			int vt_data_size,
 			int vn_data_size);
+
+		//PRIMARY CONSTRUCTOR
+		ogl_data(const boost::shared_ptr<ogl_context> &context,
+			const boost::shared_ptr<GLuint> &existing_texture,
+			const boost::shared_ptr<GLuint> &existing_normal,
+			const boost::shared_ptr<GLuint> &existing_bump,
+			GLenum draw_type,
+			const std::vector<unsigned short> &indices,
+			const std::vector<float> &vertex_data,
+			int v_data_size,
+			int vt_data_size,
+			int vn_data_size,
+			float bump_value = 0.5);
 		~ogl_data();
 
 		const int getVertexCount() const { return vertex_count; }
 		const int getIndexCount() const { return index_count; }
+		const float getBumpValue() const { return bump_intensity; }
 
 		boost::shared_ptr<GLuint> getVBO() const { return VBO; }
 		boost::shared_ptr<GLuint> getVAO() const { return VAO; }
 		boost::shared_ptr<GLuint> getTEX() const { return TEX; }
+		boost::shared_ptr<GLuint> getNOR() const { return NOR; }
+		boost::shared_ptr<GLuint> getBUM() const { return BUM; }
 		boost::shared_ptr<GLuint> getIND() const { return IND; }
 
 		void overrideVBO(boost::shared_ptr<GLuint> new_VBO) { VBO = new_VBO; }
 		void overrideVAO(boost::shared_ptr<GLuint> new_VAO) { VAO = new_VAO; }
+
 		void overrideTEX(boost::shared_ptr<GLuint> new_TEX) { 
 			if (unique_texture)
 				glDeleteTextures(1, TEX.get());
 			TEX = new_TEX; 
 			unique_texture = false; 
+		}
+
+		void overrideNOR(boost::shared_ptr<GLuint> new_NOR) {
+			if (unique_texture)
+				glDeleteTextures(1, NOR.get());
+			NOR = new_NOR;
+			unique_texture = false;
+		}
+
+		void overrideBUM(boost::shared_ptr<GLuint> new_BUM) {
+			if (unique_texture)
+				glDeleteTextures(1, BUM.get());
+			BUM = new_BUM;
+			unique_texture = false;
 		}
 		void overrideIND(boost::shared_ptr<GLuint> new_IND) { IND = new_IND; }
 
@@ -349,16 +392,21 @@ namespace jep
 			VBO = boost::shared_ptr<GLuint>(new GLuint);
 			TEX = boost::shared_ptr<GLuint>(new GLuint);
 			IND = boost::shared_ptr<GLuint>(new GLuint);
+			NOR = boost::shared_ptr<GLuint>(new GLuint);
+			BUM = boost::shared_ptr<GLuint>(new GLuint);
 		}
 
 		boost::shared_ptr<GLuint> VBO;
 		boost::shared_ptr<GLuint> VAO;
 		boost::shared_ptr<GLuint> TEX;
 		boost::shared_ptr<GLuint> IND;
+		boost::shared_ptr<GLuint> NOR;
+		boost::shared_ptr<GLuint> BUM;
 		bool element_array_enabled;
 		unsigned short index_count;
 		int vertex_count;
 		bool unique_texture;
+		float bump_intensity;
 	};
 
 	//class that stores/renders multiple ogl_data objects
@@ -561,6 +609,8 @@ namespace jep
 		void addTextureUnloaded(string file_name, string file_path);
 		void addTextureUnloaded(string file_name);
 		void unloadTexture(string name);
+
+		std::map<string, boost::shared_ptr<GLuint> > getTextures() const { return textures; }
 
 	private:
 		//filename, GLuint
