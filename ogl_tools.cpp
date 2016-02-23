@@ -425,6 +425,7 @@ namespace jep
 
 		current_render_type = rt;
 		glm::mat4 MVP;
+		glm::mat3 MV;
 
 		switch(current_render_type)
 		{
@@ -433,9 +434,11 @@ namespace jep
 			previous_view_matrix = view_matrix;
 			glUniform1i(context->getShaderGLint("use_lighting"), true);
 			MVP = projection_matrix * view_matrix * model_matrix;
+			MV = glm::mat3(view_matrix * model_matrix);
 			glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
 			glUniformMatrix4fv(context->getShaderGLint("model_matrix"), 1, GL_FALSE, &model_matrix[0][0]);
 			glUniformMatrix4fv(context->getShaderGLint("view_matrix"), 1, GL_FALSE, &view_matrix[0][0]);
+			glUniformMatrix3fv(context->getShaderGLint("MV"), 1, GL_FALSE, &MV[0][0]);
 			break;
 
 		case TEXT: //aspect ratio is adjusted in within the code, since aspect ratio adjustments need to be made before the objects are translated
@@ -942,9 +945,11 @@ namespace jep
 		const boost::shared_ptr<GLuint> &existing_texture,
 		const boost::shared_ptr<GLuint> &existing_normal,
 		const boost::shared_ptr<GLuint> &existing_bump,
+		const boost::shared_ptr<GLuint> &existing_transparency,
 		GLenum draw_type,
 		const std::vector<unsigned short> &indices,
 		const std::vector<float> &vertex_data,
+		//const std::
 		int v_data_size,
 		int vt_data_size,
 		int vn_data_size,
@@ -956,13 +961,19 @@ namespace jep
 
 		int uv_offset = v_data_size * sizeof(float);
 		int normal_offset = uv_offset + (vt_data_size * sizeof(float));
-		int stride = normal_offset + (vn_data_size * sizeof(float));
+
+		//tangents and bitangents are always vec3's
+		int tangent_offset = normal_offset + (vn_data_size * sizeof(float));
+		int bitangent_offset = tangent_offset + (3 * sizeof(float));
+
+		int stride = bitangent_offset + (3 * sizeof(float));
 
 		initializeGLuints();
 
 		TEX = existing_texture;
 		NOR = existing_normal;
 		BUM = existing_bump;
+		TRN = existing_transparency;
 		unique_texture = false;
 		element_array_enabled = true;
 
@@ -996,6 +1007,15 @@ namespace jep
 			glUniform1i(bump_ID, 2);
 		}
 
+		if (TRN.get())
+		{
+			GLuint transparency_id = context->getShaderGLint("transparencyMap");
+
+			glActiveTexture(GL_TEXTURE3);
+			glBindTexture(GL_TEXTURE_2D, *BUM);
+			glUniform1i(transparency_id, 3);
+		}
+
 		glGenBuffers(1, VBO.get());
 		glBindBuffer(GL_ARRAY_BUFFER, *VBO);
 		glBufferData(GL_ARRAY_BUFFER, vertex_data.size() * sizeof(float), &vertex_data[0], draw_type);
@@ -1006,7 +1026,6 @@ namespace jep
 
 		//TODO revise so all data exists in one buffer
 		//position
-		//TODO pass size of each element to constructor instead of hard-coding
 		glEnableVertexAttribArray(0);
 		glVertexAttribPointer(0, v_data_size, GL_FLOAT, GL_FALSE, stride, (void*)0);
 
@@ -1018,9 +1037,19 @@ namespace jep
 		glEnableVertexAttribArray(2);
 		glVertexAttribPointer(2, vn_data_size, GL_FLOAT, GL_FALSE, stride, (void*)(normal_offset));
 
+		//tangents
+		glEnableVertexAttribArray(3);
+		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, stride, (void*)(tangent_offset));
+
+		//bitangents
+		glEnableVertexAttribArray(4);
+		glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, stride, (void*)(bitangent_offset));
+
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(2);
+		glDisableVertexAttribArray(3);
+		glDisableVertexAttribArray(4);
 
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -1038,7 +1067,12 @@ namespace jep
 			glDeleteBuffers(1, IND.get());
 
 		if (unique_texture)
+		{
 			glDeleteTextures(1, TEX.get());
+			glDeleteTextures(1, NOR.get());
+			glDeleteTextures(1, BUM.get());
+			glDeleteTextures(1, TRN.get());
+		}
 	}
 
 	void ogl_model_animated::draw(const boost::shared_ptr<ogl_context> &context, const boost::shared_ptr<ogl_camera> &camera)
@@ -1324,6 +1358,7 @@ namespace jep
 			context, 
 			default_TEX, 
 			nullptr, 
+			nullptr,
 			nullptr,
 			GL_STATIC_DRAW, 
 			indices, 

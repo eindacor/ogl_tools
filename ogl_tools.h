@@ -54,7 +54,8 @@ namespace jep
 		void disableBumpMap() { glUniform1i(getShaderGLint("enable_bump"), GLint(0)); }
 		void enableNormalMap() { glUniform1i(getShaderGLint("enable_normal"), GLint(1)); }
 		void disableNormalMap() { glUniform1i(getShaderGLint("enable_normal"), GLint(0)); }
-
+		void enableTransparencyMap() { glUniform1i(getShaderGLint("enable_transparency"), GLint(1)); }
+		void disableTransparencyMap() { glUniform1i(getShaderGLint("enable_transparency"), GLint(0)); }
 
 		const GLuint getProgramID() const { return program_ID; }
 		const float getAspectRatio() const { return aspect_ratio; }
@@ -341,6 +342,7 @@ namespace jep
 			const boost::shared_ptr<GLuint> &existing_texture,
 			const boost::shared_ptr<GLuint> &existing_normal,
 			const boost::shared_ptr<GLuint> &existing_bump,
+			const boost::shared_ptr<GLuint> &existing_transparency,
 			GLenum draw_type,
 			const std::vector<unsigned short> &indices,
 			const std::vector<float> &vertex_data,
@@ -359,6 +361,7 @@ namespace jep
 		boost::shared_ptr<GLuint> getTEX() const { return TEX; }
 		boost::shared_ptr<GLuint> getNOR() const { return NOR; }
 		boost::shared_ptr<GLuint> getBUM() const { return BUM; }
+		boost::shared_ptr<GLuint> getTRN() const { return TRN; }
 		boost::shared_ptr<GLuint> getIND() const { return IND; }
 
 		void overrideVBO(boost::shared_ptr<GLuint> new_VBO) { VBO = new_VBO; }
@@ -394,6 +397,7 @@ namespace jep
 			IND = boost::shared_ptr<GLuint>(new GLuint);
 			NOR = boost::shared_ptr<GLuint>(new GLuint);
 			BUM = boost::shared_ptr<GLuint>(new GLuint);
+			TRN = boost::shared_ptr<GLuint>(new GLuint);
 		}
 
 		boost::shared_ptr<GLuint> VBO;
@@ -402,6 +406,7 @@ namespace jep
 		boost::shared_ptr<GLuint> IND;
 		boost::shared_ptr<GLuint> NOR;
 		boost::shared_ptr<GLuint> BUM;
+		boost::shared_ptr<GLuint> TRN;
 		bool element_array_enabled;
 		unsigned short index_count;
 		int vertex_count;
