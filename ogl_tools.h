@@ -48,14 +48,16 @@ namespace jep
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); glUseProgram(program_ID);
 		}
 		void swapBuffers() const { glfwSwapBuffers(window); }
-		void enableTextureMap() { glUniform1i(getShaderGLint("enable_texture"), GLint(1)); }
-		void disableTextureMap() { glUniform1i(getShaderGLint("enable_texture"), GLint(0)); }
-		void enableBumpMap(float f) { glUniform1i(getShaderGLint("enable_bump"), GLint(1)); glUniform1f(getShaderGLint("bump_value"), GLfloat(f)); }
-		void disableBumpMap() { glUniform1i(getShaderGLint("enable_bump"), GLint(0)); }
-		void enableNormalMap() { glUniform1i(getShaderGLint("enable_normal"), GLint(1)); }
-		void disableNormalMap() { glUniform1i(getShaderGLint("enable_normal"), GLint(0)); }
-		void enableTransparencyMap() { glUniform1i(getShaderGLint("enable_transparency"), GLint(1)); }
-		void disableTransparencyMap() { glUniform1i(getShaderGLint("enable_transparency"), GLint(0)); }
+		void enableDiffuseMap() { glUniform1i(getShaderGLint("enable_diffuse_map"), GLint(1)); }
+		void disableDiffuseMap() { glUniform1i(getShaderGLint("enable_diffuse_map"), GLint(0)); }
+		void enableBumpMap(float f) { glUniform1i(getShaderGLint("enable_bump_map"), GLint(1)); glUniform1f(getShaderGLint("bump_value"), GLfloat(f)); }
+		void disableBumpMap() { glUniform1i(getShaderGLint("enable_bump_map"), GLint(0)); }
+		void enableNormalMap() { glUniform1i(getShaderGLint("enable_normal_map"), GLint(1)); }
+		void disableNormalMap() { glUniform1i(getShaderGLint("enable_normal_map"), GLint(0)); }
+		void enableTransparencyMap() { glUniform1i(getShaderGLint("enable_transparency_map"), GLint(1)); }
+		void disableTransparencyMap() { glUniform1i(getShaderGLint("enable_transparency_map"), GLint(0)); }
+		void enableSpecularMap() { glUniform1i(getShaderGLint("enable_specular_map"), GLint(1)); }
+		void disableSpecularMap() { glUniform1i(getShaderGLint("enable_specular_map"), GLint(0)); }
 
 		const GLuint getProgramID() const { return program_ID; }
 		const float getAspectRatio() const { return aspect_ratio; }
@@ -296,6 +298,7 @@ namespace jep
 	class ogl_data
 	{
 	public:
+		/*
 		//new geometry, new texture
 		ogl_data(const boost::shared_ptr<ogl_context> &context,
 			const char* texture_path,
@@ -336,13 +339,15 @@ namespace jep
 			int v_data_size,
 			int vt_data_size,
 			int vn_data_size);
+		*/
 
 		//PRIMARY CONSTRUCTOR
 		ogl_data(const boost::shared_ptr<ogl_context> &context,
-			const boost::shared_ptr<GLuint> &existing_texture,
+			const boost::shared_ptr<GLuint> &existing_diffuse,
 			const boost::shared_ptr<GLuint> &existing_normal,
 			const boost::shared_ptr<GLuint> &existing_bump,
 			const boost::shared_ptr<GLuint> &existing_transparency,
+			const boost::shared_ptr<GLuint> &existing_specular,
 			GLenum draw_type,
 			const std::vector<unsigned short> &indices,
 			const std::vector<float> &vertex_data,
@@ -358,19 +363,20 @@ namespace jep
 
 		boost::shared_ptr<GLuint> getVBO() const { return VBO; }
 		boost::shared_ptr<GLuint> getVAO() const { return VAO; }
-		boost::shared_ptr<GLuint> getTEX() const { return TEX; }
+		boost::shared_ptr<GLuint> getDIF() const { return DIF; }
 		boost::shared_ptr<GLuint> getNOR() const { return NOR; }
 		boost::shared_ptr<GLuint> getBUM() const { return BUM; }
 		boost::shared_ptr<GLuint> getTRN() const { return TRN; }
+		boost::shared_ptr<GLuint> getSPC() const { return SPC; }
 		boost::shared_ptr<GLuint> getIND() const { return IND; }
 
 		void overrideVBO(boost::shared_ptr<GLuint> new_VBO) { VBO = new_VBO; }
 		void overrideVAO(boost::shared_ptr<GLuint> new_VAO) { VAO = new_VAO; }
 
-		void overrideTEX(boost::shared_ptr<GLuint> new_TEX) { 
+		void overrideTEX(boost::shared_ptr<GLuint> new_DIF) { 
 			if (unique_texture)
-				glDeleteTextures(1, TEX.get());
-			TEX = new_TEX; 
+				glDeleteTextures(1, DIF.get());
+			DIF = new_DIF; 
 			unique_texture = false; 
 		}
 
@@ -387,26 +393,44 @@ namespace jep
 			BUM = new_BUM;
 			unique_texture = false;
 		}
+
+		void overrideTRN(boost::shared_ptr<GLuint> new_TRN) {
+			if (unique_texture)
+				glDeleteTextures(1, TRN.get());
+			TRN = new_TRN;
+			unique_texture = false;
+		}
+
+		void overrideSPC(boost::shared_ptr<GLuint> new_SPC) {
+			if (unique_texture)
+				glDeleteTextures(1, SPC.get());
+			SPC = new_SPC;
+			unique_texture = false;
+		}
+
 		void overrideIND(boost::shared_ptr<GLuint> new_IND) { IND = new_IND; }
 
 	private:
 		void initializeGLuints() {
 			VAO = boost::shared_ptr<GLuint>(new GLuint);
 			VBO = boost::shared_ptr<GLuint>(new GLuint);
-			TEX = boost::shared_ptr<GLuint>(new GLuint);
+			DIF = boost::shared_ptr<GLuint>(new GLuint);
 			IND = boost::shared_ptr<GLuint>(new GLuint);
 			NOR = boost::shared_ptr<GLuint>(new GLuint);
 			BUM = boost::shared_ptr<GLuint>(new GLuint);
 			TRN = boost::shared_ptr<GLuint>(new GLuint);
+			SPC = boost::shared_ptr<GLuint>(new GLuint);
 		}
 
 		boost::shared_ptr<GLuint> VBO;
 		boost::shared_ptr<GLuint> VAO;
-		boost::shared_ptr<GLuint> TEX;
+		boost::shared_ptr<GLuint> DIF;
 		boost::shared_ptr<GLuint> IND;
 		boost::shared_ptr<GLuint> NOR;
 		boost::shared_ptr<GLuint> BUM;
 		boost::shared_ptr<GLuint> TRN;
+		boost::shared_ptr<GLuint> SPC;
+		
 		bool element_array_enabled;
 		unsigned short index_count;
 		int vertex_count;

@@ -55,7 +55,8 @@ namespace jep
 		delta_vec.w = 1.0f;
 
 		glm::mat4 origin_offset = glm::translate(glm::mat4(1.0f), glm::vec3(origin.x, origin.y, origin.z));
-		glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), degrees, axis);
+		float radians = degrees * 0.0174533;
+		glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), radians, axis);
 		glm::vec4 new_point = rotation * delta_vec;
 		return origin_offset * new_point;
 	}
@@ -499,7 +500,8 @@ namespace jep
 
 		// must be negative distance because opengl uses right-handed coordinates
 		glm::vec4 step_offset(-1.0f * dist, 0.0f, 0.0f, 1.0f);
-		glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.0f, 1.0f, 0.0f));
+		float radians = angle * 0.0174533;
+		glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), radians, glm::vec3(0.0f, 1.0f, 0.0f));
 
 		glm::vec4 new_location = rotation * step_offset;
 		camera_location = original_translate * new_location;
@@ -524,7 +526,8 @@ namespace jep
 
 		// must be negative distance because opengl uses right-handed coordinates
 		glm::vec4 step_offset(-1.0f * dist, 0.0f, 0.0f, 1.0f);
-		glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0.0f, 1.0f, 0.0f));
+		float radians = angle * 0.0174533;
+		glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), radians, glm::vec3(0.0f, 1.0f, 0.0f));
 
 		glm::vec4 new_location = rotation * step_offset;
 		camera_location = original_translate * new_location;
@@ -770,6 +773,7 @@ namespace jep
 		x_window_position = (center_x - x_position) / center_x * -1.0f;
 	}
 
+	/*
 	//new geometry, new texture
 	ogl_data::ogl_data(const boost::shared_ptr<ogl_context> &context,
 					const char* texture_path, 
@@ -793,12 +797,12 @@ namespace jep
 		glGenVertexArrays(1, VAO.get());
 		glBindVertexArray(*VAO);
 
-		jep::loadTexture(texture_path, *TEX);
+		jep::loadTexture(texture_path, *DIF);
 		//TODO make the name of the texture handler variable
 		GLuint texture_ID = context->getShaderGLint("diffuseMap");
 
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, *TEX);
+		glBindTexture(GL_TEXTURE_2D, *DIF);
 		glUniform1i(texture_ID, 0);
 
 		//TEST
@@ -835,7 +839,7 @@ namespace jep
 		int offset)
 	{
 		initializeGLuints();
-		TEX = existing_texture;
+		DIF = existing_texture;
 		NOR = existing_normal;
 		unique_texture = false;
 		element_array_enabled = false;
@@ -850,7 +854,7 @@ namespace jep
 
 		GLuint texture_ID = context->getShaderGLint("diffuseMap");
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, *TEX);
+		glBindTexture(GL_TEXTURE_2D, *DIF);
 		glUniform1i(texture_ID, 0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -895,12 +899,12 @@ namespace jep
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *IND);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned short), &indices[0], draw_type);		
 
-		jep::loadTexture(texture_path, *TEX);
+		jep::loadTexture(texture_path, *DIF);
 		//TODO make the name of the texture handler variable
 		GLuint texture_ID = context->getShaderGLint("diffuseMap");
 
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, *TEX);
+		glBindTexture(GL_TEXTURE_2D, *DIF);
 		glUniform1i(texture_ID, 0);
 
 		//TEST
@@ -939,13 +943,15 @@ namespace jep
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glBindVertexArray(0);
 	}
+	*/
 
-	//new geometry, indexed vertices, existing texture
+	// PRIMARY CONSTRUCTOR
 	ogl_data::ogl_data(const boost::shared_ptr<ogl_context> &context,
-		const boost::shared_ptr<GLuint> &existing_texture,
+		const boost::shared_ptr<GLuint> &existing_diffuse,
 		const boost::shared_ptr<GLuint> &existing_normal,
 		const boost::shared_ptr<GLuint> &existing_bump,
 		const boost::shared_ptr<GLuint> &existing_transparency,
+		const boost::shared_ptr<GLuint> &existing_specular,
 		GLenum draw_type,
 		const std::vector<unsigned short> &indices,
 		const std::vector<float> &vertex_data,
@@ -970,22 +976,23 @@ namespace jep
 
 		initializeGLuints();
 
-		TEX = existing_texture;
+		DIF = existing_diffuse;
 		NOR = existing_normal;
 		BUM = existing_bump;
 		TRN = existing_transparency;
+		SPC = existing_specular;
 		unique_texture = false;
 		element_array_enabled = true;
 
 		glGenVertexArrays(1, VAO.get());
 		glBindVertexArray(*VAO);
 
-		if (TEX.get())
+		if (DIF.get())
 		{
 			GLuint texture_ID = context->getShaderGLint("diffuseMap");
 
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, *TEX);
+			glBindTexture(GL_TEXTURE_2D, *DIF);
 			glUniform1i(texture_ID, 0);
 		}
 
@@ -1014,6 +1021,15 @@ namespace jep
 			glActiveTexture(GL_TEXTURE3);
 			glBindTexture(GL_TEXTURE_2D, *BUM);
 			glUniform1i(transparency_id, 3);
+		}
+
+		if (SPC.get())
+		{
+			GLuint specular_id = context->getShaderGLint("specularMap");
+
+			glActiveTexture(GL_TEXTURE4);
+			glBindTexture(GL_TEXTURE_2D, *SPC);
+			glUniform1i(specular_id, 4);
 		}
 
 		glGenBuffers(1, VBO.get());
@@ -1068,10 +1084,11 @@ namespace jep
 
 		if (unique_texture)
 		{
-			glDeleteTextures(1, TEX.get());
+			glDeleteTextures(1, DIF.get());
 			glDeleteTextures(1, NOR.get());
 			glDeleteTextures(1, BUM.get());
 			glDeleteTextures(1, TRN.get());
+			glDeleteTextures(1, SPC.get());
 		}
 	}
 
@@ -1081,7 +1098,7 @@ namespace jep
 		//TODO find way to identify how many frames/vertices belong to each animation
 		int frame_vertex_count = 0;
 		glBindVertexArray(*(getOGLData()->getVAO()));
-		glBindTexture(GL_TEXTURE_2D, *(getOGLData()->getTEX()));
+		glBindTexture(GL_TEXTURE_2D, *(getOGLData()->getDIF()));
 
 		camera->setMVP(context, getModelMatrix(), NORMAL);
 		glDrawArrays(GL_TRIANGLES, start_location_offset, frame_vertex_count);
@@ -1132,7 +1149,7 @@ namespace jep
 		for (const auto &i : character_array)
 		{
 			glBindVertexArray(*(i.first->getVAO()));
-			glBindTexture(GL_TEXTURE_2D, *(i.first->getTEX()));
+			glBindTexture(GL_TEXTURE_2D, *(i.first->getDIF()));
 	
 			//set mvp
 			glm::mat4 character_translation_matrix = i.second;
@@ -1166,7 +1183,7 @@ namespace jep
 		for (const auto &i : character_array)
 		{
 			glBindVertexArray(*(i.first->getVAO()));
-			glBindTexture(GL_TEXTURE_2D, *(i.first->getTEX()));
+			glBindTexture(GL_TEXTURE_2D, *(i.first->getDIF()));
 
 			//set mvp
 			glm::mat4 character_translation_matrix = i.second;
@@ -1217,7 +1234,7 @@ namespace jep
 		VAO = text->getOGLData()->getVAO();
 		VBO = text->getOGLData()->getVBO();
 		IND = text->getOGLData()->getIND();
-		TEX = text->getOGLData()->getTEX();
+		TEX = text->getOGLData()->getDIF();
 
 		grid_index = 0;
 
@@ -1358,6 +1375,7 @@ namespace jep
 			context, 
 			default_TEX, 
 			nullptr, 
+			nullptr,
 			nullptr,
 			nullptr,
 			GL_STATIC_DRAW, 
