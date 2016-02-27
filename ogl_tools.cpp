@@ -955,7 +955,6 @@ namespace jep
 		GLenum draw_type,
 		const std::vector<unsigned short> &indices,
 		const std::vector<float> &vertex_data,
-		//const std::
 		int v_data_size,
 		int vt_data_size,
 		int vn_data_size,
@@ -1019,7 +1018,7 @@ namespace jep
 			GLuint transparency_id = context->getShaderGLint("transparencyMap");
 
 			glActiveTexture(GL_TEXTURE3);
-			glBindTexture(GL_TEXTURE_2D, *BUM);
+			glBindTexture(GL_TEXTURE_2D, *TRN);
 			glUniform1i(transparency_id, 3);
 		}
 
