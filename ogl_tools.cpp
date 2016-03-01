@@ -395,7 +395,7 @@ namespace jep
 		camera_focus = focus;
 		camera_position = position;
 		aspect_scale = (float)context->getWindowWidth() / (float)context->getWindowHeight();
-		current_render_type = UNDEFINED;
+		current_render_type = UNDEFINED_RENDER_TYPE;
 
 		keys = kh;
 		view_matrix = glm::lookAt(
@@ -773,104 +773,8 @@ namespace jep
 		x_window_position = (center_x - x_position) / center_x * -1.0f;
 	}
 
-	/*
-	//new geometry, new texture
 	ogl_data::ogl_data(const boost::shared_ptr<ogl_context> &context,
-					const char* texture_path, 
-					const char* normal_path,
-					GLenum draw_type, 
-					const std::vector<float> &vec_vertices, 
-					int position_vec_size, 
-					int uv_vec_size, 
-					int stride, 
-					int uv_offset)
-	{
-		initializeGLuints();
-		unique_texture = true;
-		element_array_enabled = false;
-		vertex_count = vec_vertices.size();
-
-		glGenBuffers(1, VBO.get());
-		glBindBuffer(GL_ARRAY_BUFFER, *VBO);
-		glBufferData(GL_ARRAY_BUFFER, vec_vertices.size() * sizeof(float), &vec_vertices[0], draw_type);
-
-		glGenVertexArrays(1, VAO.get());
-		glBindVertexArray(*VAO);
-
-		jep::loadTexture(texture_path, *DIF);
-		//TODO make the name of the texture handler variable
-		GLuint texture_ID = context->getShaderGLint("diffuseMap");
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, *DIF);
-		glUniform1i(texture_ID, 0);
-
-		//TEST
-		if (normal_path != nullptr)
-		{
-			jep::loadTexture(normal_path, *NOR);
-			//TODO make the name of the texture handler variable
-			GLuint normal_ID = context->getShaderGLint("normalMap");
-
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, *NOR);
-			glUniform1i(normal_ID, 0);
-		}
-		//TEST
-
-		glEnableVertexAttribArray(0);
-		glEnableVertexAttribArray(1);
-		//if points passed were vec3's, size = 3
-		glVertexAttribPointer(0, position_vec_size, GL_FLOAT, GL_FALSE, stride, (void*)0);
-		glVertexAttribPointer(1, uv_vec_size, GL_FLOAT, GL_FALSE, stride, (void*)(uv_offset));
-
-		glBindVertexArray(0);
-	}
-
-	//new geometry, existing texture
-	ogl_data::ogl_data(const boost::shared_ptr<ogl_context> &context,
-		const boost::shared_ptr<GLuint> &existing_texture,
-		const boost::shared_ptr<GLuint> &existing_normal,
-		GLenum draw_type,
-		const std::vector<float> &vec_vertices,
-		int position_vec_size,
-		int uv_vec_size,
-		int stride,
-		int offset)
-	{
-		initializeGLuints();
-		DIF = existing_texture;
-		NOR = existing_normal;
-		unique_texture = false;
-		element_array_enabled = false;
-		vertex_count = vec_vertices.size();
-
-		glGenBuffers(1, VBO.get());
-		glBindBuffer(GL_ARRAY_BUFFER, *VBO);
-		glBufferData(GL_ARRAY_BUFFER, vec_vertices.size() * sizeof(float), &vec_vertices[0], draw_type);
-
-		glGenVertexArrays(1, VAO.get());
-		glBindVertexArray(*VAO);
-
-		GLuint texture_ID = context->getShaderGLint("diffuseMap");
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, *DIF);
-		glUniform1i(texture_ID, 0);
-		glBindTexture(GL_TEXTURE_2D, 0);
-
-		glEnableVertexAttribArray(0);
-		glEnableVertexAttribArray(1);
-		//if points passed were vec3's, size = 3
-		glVertexAttribPointer(0, position_vec_size, GL_FLOAT, GL_FALSE, stride, (void*)0);
-		glVertexAttribPointer(1, uv_vec_size, GL_FLOAT, GL_FALSE, stride, (void*)(offset));
-
-		glBindVertexArray(0);
-	}
-
-	//new geometry, indexed vertices, new texture
-	ogl_data::ogl_data(const boost::shared_ptr<ogl_context> &context,
-		const char* texture_path,
-		const char* normal_path,
+		const boost::shared_ptr<material_data> &material,
 		GLenum draw_type,
 		const std::vector<unsigned short> &indices,
 		const std::vector<float> &vertex_data,
@@ -880,89 +784,7 @@ namespace jep
 	{
 		index_count = indices.size();
 		vertex_count = vertex_data.size();
-
-		int uv_offset = v_data_size * sizeof(float);
-		int normal_offset = uv_offset + (vt_data_size * sizeof(float));
-		int stride = normal_offset + (vn_data_size * sizeof(float));
-
-		initializeGLuints();
-		unique_texture = true;
-		element_array_enabled = true;
-		glGenVertexArrays(1, VAO.get());
-		glBindVertexArray(*VAO);
-
-		glGenBuffers(1, VBO.get());
-		glBindBuffer(GL_ARRAY_BUFFER, *VBO);
-		glBufferData(GL_ARRAY_BUFFER, vertex_data.size() * sizeof(float), &vertex_data[0], draw_type);
-
-		glGenBuffers(1, IND.get());
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *IND);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned short), &indices[0], draw_type);		
-
-		jep::loadTexture(texture_path, *DIF);
-		//TODO make the name of the texture handler variable
-		GLuint texture_ID = context->getShaderGLint("diffuseMap");
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, *DIF);
-		glUniform1i(texture_ID, 0);
-
-		//TEST
-		if (normal_path != nullptr)
-		{
-			jep::loadTexture(normal_path, *NOR);
-			//TODO make the name of the texture handler variable
-			GLuint normal_ID = context->getShaderGLint("normalMap");
-
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, *NOR);
-			glUniform1i(normal_ID, 0);
-		}
-		//TEST
-	
-		//TODO revise so all data exists in one buffer
-		//position
-		//TODO pass size of each element to constructor instead of hard-coding
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, v_data_size, GL_FLOAT, GL_FALSE, stride, (void*)0);
-
-		//uv
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, vt_data_size, GL_FLOAT, GL_FALSE, stride, (void*)(uv_offset));
-
-		//normals
-		glEnableVertexAttribArray(2);
-		glVertexAttribPointer(2, vn_data_size, GL_FLOAT, GL_FALSE, stride, (void*)(normal_offset));
-
-		glDisableVertexAttribArray(0);
-		glDisableVertexAttribArray(1);
-		glDisableVertexAttribArray(2);
-
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-		glBindTexture(GL_TEXTURE_2D, 0);
-		glBindVertexArray(0);
-	}
-	*/
-
-	// PRIMARY CONSTRUCTOR
-	ogl_data::ogl_data(const boost::shared_ptr<ogl_context> &context,
-		const boost::shared_ptr<GLuint> &existing_diffuse,
-		const boost::shared_ptr<GLuint> &existing_normal,
-		const boost::shared_ptr<GLuint> &existing_bump,
-		const boost::shared_ptr<GLuint> &existing_transparency,
-		const boost::shared_ptr<GLuint> &existing_specular,
-		GLenum draw_type,
-		const std::vector<unsigned short> &indices,
-		const std::vector<float> &vertex_data,
-		int v_data_size,
-		int vt_data_size,
-		int vn_data_size,
-		float bump_value)
-	{
-		bump_intensity = bump_value;
-		index_count = indices.size();
-		vertex_count = vertex_data.size();
+		mesh_material = material;
 
 		int uv_offset = v_data_size * sizeof(float);
 		int normal_offset = uv_offset + (vt_data_size * sizeof(float));
@@ -975,61 +797,10 @@ namespace jep
 
 		initializeGLuints();
 
-		DIF = existing_diffuse;
-		NOR = existing_normal;
-		BUM = existing_bump;
-		TRN = existing_transparency;
-		SPC = existing_specular;
-		unique_texture = false;
 		element_array_enabled = true;
 
 		glGenVertexArrays(1, VAO.get());
 		glBindVertexArray(*VAO);
-
-		if (DIF.get())
-		{
-			GLuint texture_ID = context->getShaderGLint("diffuseMap");
-
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, *DIF);
-			glUniform1i(texture_ID, 0);
-		}
-
-		if (NOR.get())
-		{
-			GLuint normal_ID = context->getShaderGLint("normalMap");
-
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, *NOR);
-			glUniform1i(normal_ID, 1);
-		}
-
-		if (BUM.get())
-		{
-			GLuint bump_ID = context->getShaderGLint("bumpMap");
-
-			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_2D, *BUM);
-			glUniform1i(bump_ID, 2);
-		}
-
-		if (TRN.get())
-		{
-			GLuint transparency_id = context->getShaderGLint("transparencyMap");
-
-			glActiveTexture(GL_TEXTURE3);
-			glBindTexture(GL_TEXTURE_2D, *TRN);
-			glUniform1i(transparency_id, 3);
-		}
-
-		if (SPC.get())
-		{
-			GLuint specular_id = context->getShaderGLint("specularMap");
-
-			glActiveTexture(GL_TEXTURE4);
-			glBindTexture(GL_TEXTURE_2D, *SPC);
-			glUniform1i(specular_id, 4);
-		}
 
 		glGenBuffers(1, VBO.get());
 		glBindBuffer(GL_ARRAY_BUFFER, *VBO);
@@ -1068,7 +839,6 @@ namespace jep
 
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-		glBindTexture(GL_TEXTURE_2D, 0);
 		glBindVertexArray(0);
 	}
 
@@ -1080,15 +850,6 @@ namespace jep
 
 		if (element_array_enabled)
 			glDeleteBuffers(1, IND.get());
-
-		if (unique_texture)
-		{
-			glDeleteTextures(1, DIF.get());
-			glDeleteTextures(1, NOR.get());
-			glDeleteTextures(1, BUM.get());
-			glDeleteTextures(1, TRN.get());
-			glDeleteTextures(1, SPC.get());
-		}
 	}
 
 	void ogl_model_animated::draw(const boost::shared_ptr<ogl_context> &context, const boost::shared_ptr<ogl_camera> &camera)
@@ -1097,7 +858,8 @@ namespace jep
 		//TODO find way to identify how many frames/vertices belong to each animation
 		int frame_vertex_count = 0;
 		glBindVertexArray(*(getOGLData()->getVAO()));
-		glBindTexture(GL_TEXTURE_2D, *(getOGLData()->getDIF()));
+		//deprecated with material refactoring
+		//glBindTexture(GL_TEXTURE_2D, *(getOGLData()->getDIF()));
 
 		camera->setMVP(context, getModelMatrix(), NORMAL);
 		glDrawArrays(GL_TRIANGLES, start_location_offset, frame_vertex_count);
@@ -1148,7 +910,8 @@ namespace jep
 		for (const auto &i : character_array)
 		{
 			glBindVertexArray(*(i.first->getVAO()));
-			glBindTexture(GL_TEXTURE_2D, *(i.first->getDIF()));
+			//deprecated with material refactoring
+			//glBindTexture(GL_TEXTURE_2D, *(i.first->getDIF()));
 	
 			//set mvp
 			glm::mat4 character_translation_matrix = i.second;
@@ -1182,7 +945,8 @@ namespace jep
 		for (const auto &i : character_array)
 		{
 			glBindVertexArray(*(i.first->getVAO()));
-			glBindTexture(GL_TEXTURE_2D, *(i.first->getDIF()));
+			//deprecated with material refactoring
+			//glBindTexture(GL_TEXTURE_2D, *(i.first->getDIF()));
 
 			//set mvp
 			glm::mat4 character_translation_matrix = i.second;
@@ -1233,7 +997,8 @@ namespace jep
 		VAO = text->getOGLData()->getVAO();
 		VBO = text->getOGLData()->getVBO();
 		IND = text->getOGLData()->getIND();
-		TEX = text->getOGLData()->getDIF();
+		// deprecated with material refactoring
+		//TEX = text->getOGLData()->getDIF();
 
 		grid_index = 0;
 
@@ -1370,6 +1135,8 @@ namespace jep
 			}
 		}
 
+		//deprecated with material refactoring
+		/*
 		opengl_data = boost::shared_ptr<ogl_data>(new ogl_data(
 			context, 
 			default_TEX, 
@@ -1383,6 +1150,7 @@ namespace jep
 			3, 
 			2, 
 			3));
+		*/
 	}
 
 	text_handler::~text_handler()
@@ -1405,7 +1173,8 @@ namespace jep
 	{
 		if (font_map.find(font_name) != font_map.end())
 		{
-			opengl_data->overrideTEX(font_map.at(font_name));
+			//deprecated with material reformatting
+			//opengl_data->overrideTEX(font_map.at(font_name));
 
 			//for (auto &character : characters)
 				//character.second->overrideTEX(font_map.at(font_name));
@@ -1423,25 +1192,38 @@ namespace jep
 
 	boost::shared_ptr<GLuint> texture_handler::addTexture(string file_name)
 	{
-		string full_path = default_file_path + "\\" + file_name;
-		boost::shared_ptr<GLuint> new_texture(new GLuint);
-		jep::loadTexture(full_path.c_str(), *new_texture);
-		textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, new_texture));
-		file_paths.insert(std::pair<string, string>(file_name, full_path));
+		if (file_name.size() == 0)
+			return nullptr;
+
+		if (file_paths.find(file_name) == file_paths.end())
+		{
+			string full_path = default_file_path + "\\" + file_name;
+			boost::shared_ptr<GLuint> new_texture(new GLuint);
+			jep::loadTexture(full_path.c_str(), *new_texture);
+			textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, new_texture));
+			file_paths.insert(std::pair<string, string>(file_name, full_path));
+		}
+
 		return textures.at(file_name);
 	}
 
 	boost::shared_ptr<GLuint> texture_handler::addTexture(string file_name, string file_path)
 	{
-		boost::shared_ptr<GLuint> new_texture(new GLuint);
-		jep::loadTexture(file_path.c_str(), *new_texture);
-		textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, new_texture));
-		file_paths.insert(std::pair<string, string>(file_name, file_path));
+		if (file_name.size() == 0 || file_path.size() == 0)
+			return nullptr;
 
-		cout << "\"" << file_name << "\" has been added to the texture handler: " << endl;
-		for (auto texture_filename : textures)
+		if (file_paths.find(file_name) == file_paths.end())
 		{
-			cout << int(*(texture_filename.second)) << ": " << texture_filename.first << endl;
+			boost::shared_ptr<GLuint> new_texture(new GLuint);
+			jep::loadTexture(file_path.c_str(), *new_texture);
+			textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, new_texture));
+			file_paths.insert(std::pair<string, string>(file_name, file_path));
+
+			cout << "\"" << file_name << "\" has been added to the texture handler: " << endl;
+			for (auto texture_filename : textures)
+			{
+				cout << int(*(texture_filename.second)) << ": " << texture_filename.first << endl;
+			}
 		}
 
 		return textures.at(file_name);
@@ -1487,6 +1269,215 @@ namespace jep
 			glDeleteTextures(1, textures.at(name).get());
 			textures.at(name) = nullptr;
 		}
+	}
+
+	material_data::material_data()
+	{
+		initializeTextureData();
+		context = nullptr;
+		material_name = "";
+	}
+
+	material_data::material_data(const string &name,
+		const boost::shared_ptr<ogl_context> &existing_context,
+		boost::shared_ptr<texture_handler> &existing_textures)
+	{
+		initializeTextureData();
+
+		context = existing_context;
+		textures = existing_textures;
+		material_name = name;
+	}
+
+	material_data::material_data(
+		const string &name,
+		boost::shared_ptr<ogl_context> &existing_context,
+		boost::shared_ptr<texture_handler> &existing_textures, 
+		const string &diffuse_name, 
+		const string &bump_name, 
+		const string &normal_name, 
+		const string &transparency_name, 
+		const string &specular_name)
+	{
+		initializeTextureData();
+
+		context = existing_context;
+		textures = existing_textures;
+		material_name = name;
+
+		setTextureData("diffuse", diffuse_name);
+		setTextureData("bump", bump_name);
+		setTextureData("normal", normal_name);
+		setTextureData("transparency", transparency_name);
+		setTextureData("specular", specular_name);
+
+		if (texture_gluints.at("diffuse").get())
+		{
+			GLuint diffuse_id = context->getShaderGLint("diffuseMap");
+
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, *texture_gluints.at("diffuse"));
+			glUniform1i(diffuse_id, 0);
+		}
+
+		if (texture_gluints.at("bump").get())
+		{
+			GLuint bump_id = context->getShaderGLint("bumpMap");
+
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, *texture_gluints.at("bump"));
+			glUniform1i(bump_id, 1);
+		}
+
+		if (texture_gluints.at("normal").get())
+		{
+			GLuint normal_id = context->getShaderGLint("normalMap");
+
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_2D, *texture_gluints.at("normal"));
+			glUniform1i(normal_id, 2);
+		}
+
+		if (texture_gluints.at("transparency").get())
+		{
+			GLuint transparency_id = context->getShaderGLint("transparencyMap");
+
+			glActiveTexture(GL_TEXTURE3);
+			glBindTexture(GL_TEXTURE_2D, *texture_gluints.at("transparency"));
+			glUniform1i(transparency_id, 3);
+		}
+
+		if (texture_gluints.at("specular").get())
+		{
+			GLuint specular_id = context->getShaderGLint("specularMap");
+
+			glActiveTexture(GL_TEXTURE4);
+			glBindTexture(GL_TEXTURE_2D, *texture_gluints.at("specular"));
+			glUniform1i(specular_id, 4);
+		}
+	}
+
+	void material_data::initializeTextureData()
+	{
+		vector<string> map_handles = { "diffuse", "bump", "normal", "transparency", "specular" };
+
+		for (vector<string>::const_iterator handle_it = map_handles.cbegin(); handle_it != map_handles.cend(); handle_it++)
+		{
+			map_statuses.insert(pair<string, bool>(*handle_it, false));
+			texture_gluints.insert(pair<string, boost::shared_ptr<GLuint> >(*handle_it, nullptr));
+			texture_names.insert(pair<string, string>(*handle_it, ""));
+		}
+	}
+
+	void material_data::setTextureData(const string &map_handler, const string &material_name)
+	{
+		if (map_statuses.find(map_handler) == map_statuses.end())
+			return;
+
+		boost::shared_ptr<GLuint> texture_pointer = textures->addTexture(material_name);
+		if (texture_pointer.get())
+		{
+			map_statuses.at(map_handler) = true;
+			texture_gluints.at(map_handler) = texture_pointer;
+			texture_names.at(map_handler) = material_name;
+		}
+	}
+
+	string material_data::getTextureName(const string &map_handle) const
+	{
+		if (texture_names.find(map_handle) != texture_names.end())
+			return texture_names.at(map_handle);
+
+		else return "";
+	}
+
+	bool material_data::getMapStatus(const string &map_handle) const
+	{
+		if (map_statuses.find(map_handle) != map_statuses.end())
+			return map_statuses.at(map_handle);
+
+		else return false;
+	}
+
+	boost::shared_ptr<GLuint> material_data::getGluint(const string &map_handle) const
+	{
+		if (texture_gluints.find(map_handle) != texture_gluints.end())
+			return texture_gluints.at(map_handle);
+
+		else return false;
+	}
+
+	void material_data::setShader() const
+	{
+		if (GLint(map_statuses.at("diffuse") && texture_gluints.at("diffuse").get()))
+		{
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, *(texture_gluints.at("diffuse")));
+			glUniform1i(context->getShaderGLint("diffuseMap"), 0);
+			glUniform1i(context->getShaderGLint("enable_diffuse_map"), 1);
+		}
+
+		else glUniform1i(context->getShaderGLint("enable_diffuse_map"), 0);
+
+		if (GLint(map_statuses.at("bump") && texture_gluints.at("bump").get()))
+		{
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, *(texture_gluints.at("bump")));
+			glUniform1i(context->getShaderGLint("bumpMap"), 1);
+			glUniform1i(context->getShaderGLint("enable_bump_map"), 1);
+		}
+
+		else glUniform1i(context->getShaderGLint("enable_bump_map"), 0);
+
+		if (GLint(map_statuses.at("normal") && texture_gluints.at("normal").get()))
+		{
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_2D, *(texture_gluints.at("normal")));
+			glUniform1i(context->getShaderGLint("normalMap"), 2);
+			glUniform1i(context->getShaderGLint("enable_normal_map"), 1);
+		}
+
+		else glUniform1i(context->getShaderGLint("enable_normal_map"), 0);
+
+		if (GLint(map_statuses.at("transparency") && texture_gluints.at("transparency").get()))
+		{
+			glActiveTexture(GL_TEXTURE3);
+			glBindTexture(GL_TEXTURE_2D, *(texture_gluints.at("transparency")));
+			glUniform1i(context->getShaderGLint("transparencyMap"), 3);
+			glUniform1i(context->getShaderGLint("enable_transparency_map"), 1);
+		}
+
+		else glUniform1i(context->getShaderGLint("enable_transparency_map"), 0);
+
+		if (GLint(map_statuses.at("specular") && texture_gluints.at("specular").get()))
+		{
+			glActiveTexture(GL_TEXTURE4);
+			glBindTexture(GL_TEXTURE_2D, *(texture_gluints.at("specular")));
+			glUniform1i(context->getShaderGLint("specularMap"), 4);
+			glUniform1i(context->getShaderGLint("enable_specular_map"), 1);
+		}
+
+		else glUniform1i(context->getShaderGLint("enable_specular_map"), 0);
+
+		glUniform1f(context->getShaderGLint("bump_value"), bump_value);
+		glUniform1i(context->getShaderGLint("specular_dampening"), specular_dampening);
+		glUniform1f(context->getShaderGLint("specular_value"), specular_value);
+		glUniform3fv(context->getShaderGLint("specular_color"), 1, &specular_color[0]);
+		glUniform3fv(context->getShaderGLint("default_diffuse_color"), 1, &default_diffuse_color[0]);
+	}
+
+	bool material_data::overrideMap(const string &map_handle, const boost::shared_ptr<GLuint> &new_gluint) {
+		if (texture_gluints.find(map_handle) == texture_gluints.end())
+			return false;
+
+		if (*(texture_gluints.find(map_handle))->second.get())
+		{
+			// let texture handler keep track of maps that are no longer in use, call to it to subrtract counter for this texture
+		}
+
+		texture_gluints[map_handle] = new_gluint;
+
+		return true;
 	}
 
 	line::line(glm::vec4 first, glm::vec4 second, glm::vec4 c)
