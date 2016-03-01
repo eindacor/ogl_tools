@@ -89,9 +89,19 @@ namespace jep
 
 		if (vt_data.size() > 0)
 		{
-			u = vt_data.at(0);
-			v = vt_data.at(1);
-			uv = glm::vec2(vt_data.at(0), vt_data.at(1));
+			if (vt_data.size() == 1)
+			{
+				for (int i = 0; i < all_data.size(); i++)
+				{
+					cout << all_data[i] << endl;
+				}
+			}
+
+			else {
+				u = vt_data.at(0);
+				v = vt_data.at(1);
+				uv = glm::vec2(vt_data.at(0), vt_data.at(1));
+			}
 		}
 
 		else
@@ -549,6 +559,33 @@ namespace jep
 		}
 	}
 
+	vector<vertex_data> createFaceFromVertices(const vector<int> &indices, const vector<vertex_data> &vertices)
+	{
+		vector<vertex_data> returned_vertices;
+
+		for (vector<int>::const_iterator i = indices.cbegin(); i != indices.cend(); i++)
+		{
+			try
+			{
+				returned_vertices.push_back(vertices.at(*i));
+			}
+
+			catch (const std::out_of_range &oor) {}
+		}
+
+		return returned_vertices;
+	}
+
+	void addDataToMesh(mesh_data &mesh, const vector<vertex_data> &vertices)
+	{
+		for (vector<vertex_data>::const_iterator it = vertices.cbegin(); it != vertices.cend(); it++)
+		{
+			mesh.addVData(it->getVData());
+			mesh.addVTData(it->getVTData());
+			mesh.addVNData(it->getVNData());
+		}
+	}
+
 	obj_contents::obj_contents(const char* obj_file)
 	{
 		v_index_counter = 1;
@@ -676,45 +713,21 @@ namespace jep
 					extracted_vertices.push_back(vert);
 				}
 
-				//from extracted vertices, create 1 face for triangulated meshes,
-				//separate quadrangulated meshes into 2 separate faces
-				if (extracted_face_data.size() == 3)
-				{
-					vector<vertex_data> face;
-					face.push_back(extracted_vertices[0]);
-					face.push_back(extracted_vertices[1]);
-					face.push_back(extracted_vertices[2]);
+				//while loop allows for obj file to contain faces with >3 vertices
+				int first = 0;
+				int second = 1;
+				int third = 2;
 
+				while (third < extracted_face_data.size())
+				{
+					vector<vertex_data> face = createFaceFromVertices({ first, second, third }, extracted_vertices);
 					current_mesh->addFace(face);
-				}
 
-				else if (extracted_face_data.size() == 4)
-				{
-					vector<vertex_data> face_a;
-					face_a.push_back(extracted_vertices[0]);
-					face_a.push_back(extracted_vertices[1]);
-					face_a.push_back(extracted_vertices[3]);
-					current_mesh->addFace(face_a);
+					if (second != first + 1)
+						addDataToMesh(*current_mesh, face);
 
-					for (vector<vertex_data>::iterator it = face_a.begin(); it != face_a.end(); it++)
-					{
-						current_mesh->addVData(it->getVData());
-						current_mesh->addVTData(it->getVTData());
-						current_mesh->addVNData(it->getVNData());
-					}
-
-					vector<vertex_data> face_b;
-					face_b.push_back(extracted_vertices[1]);
-					face_b.push_back(extracted_vertices[2]);
-					face_b.push_back(extracted_vertices[3]);
-					current_mesh->addFace(face_b);
-
-					for (vector<vertex_data>::iterator it = face_b.begin(); it != face_b.end(); it++)
-					{
-						current_mesh->addVData(it->getVData());
-						current_mesh->addVTData(it->getVTData());
-						current_mesh->addVNData(it->getVNData());
-					}
+					second++;
+					third++;
 				}
 			}
 		}
@@ -733,9 +746,14 @@ namespace jep
 		glm::vec3 v1(v_data_1.getVData()[0], v_data_1.getVData()[1], v_data_1.getVData()[2]);
 		glm::vec3 v2(v_data_2.getVData()[0], v_data_2.getVData()[1], v_data_2.getVData()[2]);
 
-		glm::vec2 uv0(v_data_0.getVTData()[0], v_data_0.getVTData()[1]);
-		glm::vec2 uv1(v_data_1.getVTData()[0], v_data_1.getVTData()[1]);
-		glm::vec2 uv2(v_data_2.getVTData()[0], v_data_2.getVTData()[1]);
+		vector<float> uv0_vtdata = v_data_0.getVTData();
+		glm::vec2 uv0(uv0_vtdata.size() > 1 ? uv0_vtdata[0] : 0.0, uv0_vtdata.size() > 1 ? uv0_vtdata[1] : 0.0);
+
+		vector<float> uv1_vtdata = v_data_1.getVTData();
+		glm::vec2 uv1(uv1_vtdata.size() > 1 ? uv1_vtdata[0] : 1.0, uv1_vtdata.size() > 1 ? uv1_vtdata[1] : 1.0);
+
+		vector<float> uv2_vtdata = v_data_2.getVTData();
+		glm::vec2 uv2(uv2_vtdata.size() > 1 ? uv2_vtdata[0] : 1.0, uv2_vtdata.size() > 1 ? uv2_vtdata[1] : 0.0);
 
 		glm::vec3 deltaPos1 = v1 - v0;
 		glm::vec3 deltaPos2 = v2 - v0;
@@ -776,68 +794,35 @@ namespace jep
 
 	const vector<float> extractFloats(const string &s)
 	{
-		vector<float> floats;
-
-		vector<int> digits;
-		bool negative = false;
-		bool decimal_found = false;
-		int decimal_places = 0;
-		bool values_begin = false;
-
+		vector<float> separated;
+		string current_string = "";
 		for (int i = 0; i < s.size(); i++)
 		{
-			if (s[i] == '-')
-				negative = true;
+			bool add_string = false;
+			if (s[i] == ' ')
+				add_string = true;
 
-			else if (s[i] == '.')
-				decimal_found = true;
+			else current_string += s[i];
 
-			else if (s[i] >= '0' && s[i] <= '9')
+			if (i == s.size() - 1 && current_string.size() > 0)
+				add_string = true;
+
+			if (add_string)
 			{
-				int char_int = '0';
-				char_int = s[i] - char_int;
-				digits.push_back(char_int);
-				if (decimal_found)
-					decimal_places++;
-			}
-
-			//if space found or end of string
-			if ((s[i] == ' ' && values_begin) || i == s.size() - 1)
-			{
-				float extracted = 0;
-
-				for (int n = 0; n < digits.size(); n++)
+				try
 				{
-					//example--> 470.258
-					//size = 6
-					//decimal_places = 3
-					//first iteration of loop points to 4, which is in the
-					//10^2 location. 
-					//6 - 3 - 1 - 0 = 2 for the first loop
-					//6 - 3 - 1 - 1 = 1 for the second loop
-					int nth = digits.size() - decimal_places - 1 - n;
-					float multiplier = pow(10.0f, float(nth));
-					float toAdd = digits[n] * multiplier;
-					extracted += toAdd;
+					float toAdd = std::stof(current_string);
+					separated.push_back(toAdd);
 				}
 
-				if (negative)
-					extracted *= -1.0f;
+				catch (const std::out_of_range &oor) {}
+				catch (const std::invalid_argument &ia) {}
 
-				floats.push_back(extracted);
-
-				//resets counters
-				digits.clear();
-				negative = false;
-				decimal_found = false;
-				decimal_places = 0;
+				current_string.clear();
 			}
-
-			else if (s[i] == ' ' && !values_begin)
-				values_begin = true;
 		}
 
-		return floats;
+		return separated;
 	}
 
 	const vector< vector<int> > extractFaceSequence(const string &s)

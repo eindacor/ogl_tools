@@ -366,6 +366,8 @@ namespace jep
 		virtual void draw(){};
 		boost::shared_ptr<ogl_data> getOGLData() { return opengl_data; }
 		glm::mat4 getModelMatrix() const { return model_matrix; }
+		glm::mat4 setModelMatrix(const glm::mat4 &matrix) { model_matrix = matrix; return model_matrix; }
+		glm::mat4 transformModelMatrix(const glm::mat4 &transformation_matrix) { model_matrix = transformation_matrix * model_matrix; return model_matrix; }
 
 	private:
 		boost::shared_ptr<ogl_data> opengl_data;
