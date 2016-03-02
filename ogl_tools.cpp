@@ -852,6 +852,38 @@ namespace jep
 			glDeleteBuffers(1, IND.get());
 	}
 
+	void ogl_model::draw(boost::shared_ptr<ogl_camera> &camera)
+	{
+		for (auto mesh : model_data)
+		{
+			glBindVertexArray(*(mesh->getVAO()));
+			glEnableVertexAttribArray(0);
+			glEnableVertexAttribArray(1);
+			glEnableVertexAttribArray(2);
+			glEnableVertexAttribArray(3);
+			glEnableVertexAttribArray(4);
+
+			mesh->getMaterial()->setShader();
+
+			//TODO try removing this line
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *(mesh->getIND()));
+
+			camera->setMVP(context, model_matrix, jep::NORMAL);
+
+			//glDrawArrays(GL_TRIANGLES, 0, opengl_data->getVertexCount());
+			glDrawElements(GL_TRIANGLES, mesh->getIndexCount(), GL_UNSIGNED_SHORT, (void*)0);
+			glBindTexture(GL_TEXTURE_2D, 0);
+
+			glDisableVertexAttribArray(0);
+			glDisableVertexAttribArray(1);
+			glDisableVertexAttribArray(2);
+			glDisableVertexAttribArray(3);
+			glDisableVertexAttribArray(4);
+			glBindVertexArray(0);
+		}
+	}
+
+	/*
 	void ogl_model_animated::draw(const boost::shared_ptr<ogl_context> &context, const boost::shared_ptr<ogl_camera> &camera)
 	{
 		int start_location_offset = animation_indices.at(current_animation).at(current_frame);
@@ -868,6 +900,7 @@ namespace jep
 
 		glBindVertexArray(0);
 	}
+	*/
 
 	static_text::static_text(string s, text_justification tj, const boost::shared_ptr<text_handler> &text,
 		const glm::vec4 &color, GLchar* text_enable_ID, GLchar* text_color_ID,

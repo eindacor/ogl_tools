@@ -360,20 +360,23 @@ namespace jep
 	class ogl_model
 	{
 	public:
-		ogl_model(boost::shared_ptr<ogl_data> ogld) { opengl_data = ogld; }
-		~ogl_model(){};
+		ogl_model(const boost::shared_ptr<ogl_context> &existing_context) { context = existing_context; }
+		~ogl_model() {};
 
-		virtual void draw(){};
+		virtual void draw(boost::shared_ptr<ogl_camera> &camera);
 		boost::shared_ptr<ogl_data> getOGLData() { return opengl_data; }
 		glm::mat4 getModelMatrix() const { return model_matrix; }
-		glm::mat4 setModelMatrix(const glm::mat4 &matrix) { model_matrix = matrix; return model_matrix; }
-		glm::mat4 transformModelMatrix(const glm::mat4 &transformation_matrix) { model_matrix = transformation_matrix * model_matrix; return model_matrix; }
+		void addData(const boost::shared_ptr<ogl_data> &toAdd) { model_data.push_back(toAdd); }
 
 	private:
 		boost::shared_ptr<ogl_data> opengl_data;
-		glm::mat4 model_matrix;
+		glm::mat4 model_matrix = glm::mat4(1.0);
+		boost::shared_ptr<ogl_context> context;
+
+		vector < boost::shared_ptr<ogl_data> > model_data;
 	};
 
+	/*
 	class ogl_model_static : public ogl_model
 	{
 	public: 
@@ -412,6 +415,7 @@ namespace jep
 		int current_animation;
 		int current_frame;
 	};
+	*/
 
 	class ogl_scene
 	{
