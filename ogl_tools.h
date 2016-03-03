@@ -538,8 +538,8 @@ namespace jep
 		~text_handler();
 
 		boost::shared_ptr<ogl_data> getOGLData() const { return opengl_data; }
-		void addFont(string font_name, const char* text_image_path);
-		void switchFont(string font_name);
+		void addFont(const string &font_name, const char* text_image_path);
+		void switchFont(const string &font_name);
 
 	private:
 		boost::shared_ptr<GLuint> default_TEX;
@@ -551,24 +551,22 @@ namespace jep
 	class texture_handler
 	{
 	public:
-		texture_handler(string default_path){ default_file_path = default_path; }
+		texture_handler(const string &default_path){ default_file_path = default_path; }
 		~texture_handler();
 
-		boost::shared_ptr<GLuint> addTexture(string file_name);
-		boost::shared_ptr<GLuint> addTexture(string file_name, string file_path);
-		boost::shared_ptr<GLuint> getTexture(string name);
+		boost::shared_ptr<GLuint> addTexture(const string &file_name);
+		boost::shared_ptr<GLuint> addTexture(const string &file_name, const string &file_path);
+		boost::shared_ptr<GLuint> getTexture(const string &name);
 
-		void addTextureUnloaded(string file_name, string file_path);
-		void addTextureUnloaded(string file_name);
-		void unloadTexture(string name);
+		void addTextureUnloaded(const string &file_name, const string &file_path);
+		void addTextureUnloaded(const string &file_name);
+		void unloadTexture(const string &name);
 
-		std::map<string, boost::shared_ptr<GLuint> > getTextures() const { return textures; }
+		std::map<string, std::pair<string, boost::shared_ptr<GLuint> > > getTextures() const { return saved_textures; }
 
 	private:
-		//filename, GLuint
-		std::map<string, boost::shared_ptr<GLuint> > textures;
-		//filename, file path
-		std::map<string, string > file_paths;
+		//texture name {file path, GLuint}
+		std::map<string, std::pair<string, boost::shared_ptr<GLuint> > > saved_textures;
 		string default_file_path;
 	};
 
@@ -857,9 +855,11 @@ namespace jep
 
 		void setBumpValue(const float &f) { bump_value = glm::clamp(f, 0.0f, 1.0f); }
 		void setSpecularValue(const float &f) { specular_value = glm::clamp(f, 0.0f, 1.0f); }
+		void setGlobalTransparency(const float &f) { global_transparency = glm::clamp(f, 0.0f, 1.0f); }
 		void setSpecularColor(const glm::vec3 &color) { specular_color = color; }
 		void setSpecularDampening(const int &i) { specular_dampening = (i < 0 ? 0 : i); }
 		void setDefaultDiffuseColor(const glm::vec3 &color) { default_diffuse_color = color; }
+		void setSpecularIgnoresTransparency(const bool b) { specular_ignores_transparency = b; }
 
 		boost::shared_ptr<GLuint> getGluint(const string &map_handle) const;
 		string getTextureName(const string &map_handle) const;
@@ -868,14 +868,16 @@ namespace jep
 		std::pair<string, bool> getMapData(const string &map_handle);
 		float getBumpValue() const { return bump_value; }
 		float getSpecularValue() const { return specular_value; }
+		float getGlobalTransparency() const { return global_transparency; }
 		glm::vec3 getSpecularColor() const { return specular_color; }
 		int getSpecularDampening() const { return specular_dampening; }
 		glm::vec3 getDefaultDiffuseColor() const { return default_diffuse_color; }
+		bool getSpecularIgnoresTransparency() const { return specular_ignores_transparency; }
 
 		void setShader() const;
 		bool overrideMap(const string &map_handle, const boost::shared_ptr<GLuint> &new_gluint);
 
-		void setTextureData(const string &map_handler, const string &material_name);
+		void setTextureData(const string &map_handler, const string &texture_name);
 
 	private:
 		string material_name;
@@ -893,8 +895,10 @@ namespace jep
 		glm::vec3 specular_color = glm::vec3(1.0, 1.0, 1.0);
 		int specular_dampening = 10;
 		glm::vec3 default_diffuse_color = glm::vec3(0.5f, 0.5f, 0.5f);
+		float global_transparency = 0.0;
 
 		bool unique_texture = false;
+		bool specular_ignores_transparency = true;
 
 		boost::shared_ptr<ogl_context> context;
 		boost::shared_ptr<texture_handler> textures;

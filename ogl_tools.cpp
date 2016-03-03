@@ -1194,7 +1194,7 @@ namespace jep
 			glDeleteTextures(1, tex.second.get());
 	}
 
-	void text_handler::addFont(string font_name, const char* text_image_path)
+	void text_handler::addFont(const string &font_name, const char* text_image_path)
 	{
 		if (font_map.find(font_name) == font_map.end())
 			font_map[font_name] = boost::shared_ptr<GLuint>(new GLuint);
@@ -1202,7 +1202,7 @@ namespace jep
 		jep::loadTexture(text_image_path, *font_map.at(font_name));
 	}
 
-	void text_handler::switchFont(string font_name)
+	void text_handler::switchFont(const string &font_name)
 	{
 		if (font_map.find(font_name) != font_map.end())
 		{
@@ -1223,50 +1223,48 @@ namespace jep
 		}		
 	}
 
-	boost::shared_ptr<GLuint> texture_handler::addTexture(string file_name)
+	boost::shared_ptr<GLuint> texture_handler::addTexture(const string &file_name)
 	{
 		if (file_name.size() == 0)
 			return nullptr;
 
-		if (file_paths.find(file_name) == file_paths.end())
+		if (texture_filenames.find(file_name) == file_paths.end())
 		{
 			string full_path = default_file_path + "\\" + file_name;
 			boost::shared_ptr<GLuint> new_texture(new GLuint);
 			jep::loadTexture(full_path.c_str(), *new_texture);
 			textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, new_texture));
 			file_paths.insert(std::pair<string, string>(file_name, full_path));
+
+			cout << default_file_path + file_name << " has been added to the texture handler" << endl;
 		}
 
 		return textures.at(file_name);
 	}
 
-	boost::shared_ptr<GLuint> texture_handler::addTexture(string file_name, string file_path)
+	boost::shared_ptr<GLuint> texture_handler::addTexture(const string &texture_name, const string &file_path)
 	{
-		if (file_name.size() == 0 || file_path.size() == 0)
+		if (texture_name.size() == 0 || file_path.size() == 0)
 			return nullptr;
 
-		if (file_paths.find(file_name) == file_paths.end())
+		if (file_paths.find(texture_name) == file_paths.end())
 		{
 			boost::shared_ptr<GLuint> new_texture(new GLuint);
 			jep::loadTexture(file_path.c_str(), *new_texture);
-			textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, new_texture));
-			file_paths.insert(std::pair<string, string>(file_name, file_path));
+			textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(texture_name, new_texture));
+			file_paths.insert(std::pair<string, string>(texture_name, file_path));
 
-			cout << "\"" << file_name << "\" has been added to the texture handler: " << endl;
-			for (auto texture_filename : textures)
-			{
-				cout << int(*(texture_filename.second)) << ": " << texture_filename.first << endl;
-			}
+			cout << file_path + texture_name << " has been added to the texture handler" << endl;
 		}
 
-		return textures.at(file_name);
+		return textures.at(texture_name);
 	}
 
-	boost::shared_ptr<GLuint> texture_handler::getTexture(string name)
+	boost::shared_ptr<GLuint> texture_handler::getTexture(const string &name)
 	{
 		if (textures.find(name) == textures.end())
 		{
-			cout << "\"" << name << "\" was not added to the texture handler" << endl;
+			cout << "\"" << name << "\" could not be found by the texture handler" << endl;
 			return nullptr;
 		}
 
@@ -1279,20 +1277,20 @@ namespace jep
 		return textures.at(name);
 	}
 
-	void texture_handler::addTextureUnloaded(string file_name, string file_path)
+	void texture_handler::addTextureUnloaded(const string &file_name, const string &file_path)
 	{
 		textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, nullptr));
 		file_paths.insert(std::pair<string, string>(file_name, file_path));
 	}
 
-	void texture_handler::addTextureUnloaded(string file_name)
+	void texture_handler::addTextureUnloaded(const string &file_name)
 	{
 		string full_path = default_file_path + "\\" + file_name;
 		textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, nullptr));
 		file_paths.insert(std::pair<string, string>(file_name, full_path));
 	}
 
-	void texture_handler::unloadTexture(string name)
+	void texture_handler::unloadTexture(const string &name)
 	{
 		if (textures.find(name) == textures.end())
 			cout << name << " was not added to the texture handler" << endl;
@@ -1402,17 +1400,17 @@ namespace jep
 		}
 	}
 
-	void material_data::setTextureData(const string &map_handler, const string &material_name)
+	void material_data::setTextureData(const string &map_handler, const string &texture_name)
 	{
 		if (map_statuses.find(map_handler) == map_statuses.end())
 			return;
 
-		boost::shared_ptr<GLuint> texture_pointer = textures->addTexture(material_name);
+		boost::shared_ptr<GLuint> texture_pointer = textures->addTexture(texture_name);
 		if (texture_pointer.get())
 		{
 			map_statuses.at(map_handler) = true;
 			texture_gluints.at(map_handler) = texture_pointer;
-			texture_names.at(map_handler) = material_name;
+			texture_names.at(map_handler) = texture_name;
 		}
 	}
 
@@ -1497,6 +1495,8 @@ namespace jep
 		glUniform1f(context->getShaderGLint("specular_value"), specular_value);
 		glUniform3fv(context->getShaderGLint("specular_color"), 1, &specular_color[0]);
 		glUniform3fv(context->getShaderGLint("default_diffuse_color"), 1, &default_diffuse_color[0]);
+		glUniform1i(context->getShaderGLint("specular_ignores_transparency"), specular_ignores_transparency);
+		glUniform1f(context->getShaderGLint("global_transparency"), global_transparency);
 	}
 
 	bool material_data::overrideMap(const string &map_handle, const boost::shared_ptr<GLuint> &new_gluint) {
