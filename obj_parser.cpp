@@ -1058,15 +1058,21 @@ namespace jep
 
 			if (type == MTL_MAP_KD) {
 				string diffuse_filename = extractName(line);
-				current_material->second->setTextureData("diffuse", diffuse_filename);
+				string texture_handle = current_material->second->getMaterialName() + "_diffuse";
+				textures->addTextureByFilename(texture_handle, diffuse_filename);
+				current_material->second->setTextureData("diffuse", texture_handle);
 			}
 
 			if (type == MTL_MAP_BUMP)
 			{
 				string bumpmap_string = extractName(line);
 				size_t filename_delimiter = bumpmap_string.find(" -bm ");
+
 				string bump_filename = bumpmap_string.substr(0, filename_delimiter);
-				current_material->second->setTextureData("bump", bump_filename);
+				string texture_handle = current_material->second->getMaterialName() + "_bump";
+				textures->addTextureByFilename(texture_handle, bump_filename);
+				current_material->second->setTextureData("bump", texture_handle);
+
 				string extracted_intensity = bumpmap_string.substr(filename_delimiter + 4);
 				current_material->second->setBumpValue(std::stof(extracted_intensity, 0));
 			}

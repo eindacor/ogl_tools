@@ -1216,89 +1216,98 @@ namespace jep
 
 	texture_handler::~texture_handler()
 	{
-		for (auto i : textures)
+		for (auto i : map_gluints)
 		{
 			if (i.second != nullptr)
 				glDeleteTextures(1, i.second.get());
 		}		
 	}
 
-	boost::shared_ptr<GLuint> texture_handler::addTexture(const string &file_name)
+	boost::shared_ptr<GLuint> texture_handler::addTextureByFilename(const string &texture_handle, const string &file_name)
 	{
-		if (file_name.size() == 0)
-			return nullptr;
-
-		if (texture_filenames.find(file_name) == file_paths.end())
-		{
-			string full_path = default_file_path + "\\" + file_name;
-			boost::shared_ptr<GLuint> new_texture(new GLuint);
-			jep::loadTexture(full_path.c_str(), *new_texture);
-			textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, new_texture));
-			file_paths.insert(std::pair<string, string>(file_name, full_path));
-
-			cout << default_file_path + file_name << " has been added to the texture handler" << endl;
-		}
-
-		return textures.at(file_name);
+		string full_path = default_file_path + "\\" + file_name;
+		return addTextureByPath(texture_handle, full_path);
 	}
 
-	boost::shared_ptr<GLuint> texture_handler::addTexture(const string &texture_name, const string &file_path)
+	boost::shared_ptr<GLuint> texture_handler::addTextureByPath(const string &texture_handle, const string &file_path)
 	{
-		if (texture_name.size() == 0 || file_path.size() == 0)
+		if (texture_handle.size() == 0 || file_path.size() == 0)
 			return nullptr;
 
-		if (file_paths.find(texture_name) == file_paths.end())
+		if (map_paths.find(file_path) != map_paths.end())
 		{
-			boost::shared_ptr<GLuint> new_texture(new GLuint);
-			jep::loadTexture(file_path.c_str(), *new_texture);
-			textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(texture_name, new_texture));
-			file_paths.insert(std::pair<string, string>(texture_name, file_path));
-
-			cout << file_path + texture_name << " has been added to the texture handler" << endl;
+			cout << "A texture with the following file path already exists in the texture handler: " << file_path << endl;
+			return nullptr;
+		}
+		
+		if (map_gluints.find(texture_handle) != map_gluints.end())
+		{
+			cout << "A texture with the following map handle already exists in the texture handler: " << texture_handle << endl;
+			return nullptr;
 		}
 
-		return textures.at(texture_name);
+		boost::shared_ptr<GLuint> new_texture(new GLuint);
+		jep::loadTexture(file_path.c_str(), *new_texture);
+		map_gluints.insert(std::pair<string, boost::shared_ptr<GLuint> >(texture_handle, new_texture));
+		map_paths.insert(std::pair<string, string>(file_path, texture_handle));
+
+		cout << texture_handle << " has been added to the texture handler" << endl;
+
+		return map_gluints.at(texture_handle);
 	}
 
 	boost::shared_ptr<GLuint> texture_handler::getTexture(const string &name)
 	{
-		if (textures.find(name) == textures.end())
+		if (map_gluints.find(name) == map_gluints.end())
 		{
 			cout << "\"" << name << "\" could not be found by the texture handler" << endl;
 			return nullptr;
 		}
 
-		else if (textures.at(name) == nullptr)
+		else if (!map_gluints.at(name).get())
 		{
-			string full_path = file_paths.at(name);
-			jep::loadTexture(full_path.c_str(), *textures.at(name));
+			string full_path;
+
+			for (const auto path_pair : map_paths)
+			{
+				if (path_pair.second == name)
+				{
+					full_path = path_pair.first;
+					break;
+				}
+			}
+
+			if (full_path.size() == 0)
+				return nullptr;
+			
+			jep::loadTexture(full_path.c_str(), *map_gluints.at(name));
 		}
 
-		return textures.at(name);
+		return map_gluints.at(name);
 	}
 
 	void texture_handler::addTextureUnloaded(const string &file_name, const string &file_path)
 	{
-		textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, nullptr));
-		file_paths.insert(std::pair<string, string>(file_name, file_path));
+		map_gluints.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, nullptr));
+		map_paths.insert(std::pair<string, string>(file_path, file_name));
 	}
 
 	void texture_handler::addTextureUnloaded(const string &file_name)
 	{
 		string full_path = default_file_path + "\\" + file_name;
-		textures.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, nullptr));
-		file_paths.insert(std::pair<string, string>(file_name, full_path));
+		map_gluints.insert(std::pair<string, boost::shared_ptr<GLuint> >(file_name, nullptr));
+		map_paths.insert(std::pair<string, string>(full_path, file_name));
 	}
 
 	void texture_handler::unloadTexture(const string &name)
 	{
-		if (textures.find(name) == textures.end())
+		if (map_gluints.find(name) == map_gluints.end())
 			cout << name << " was not added to the texture handler" << endl;
 
 		else
 		{
-			glDeleteTextures(1, textures.at(name).get());
-			textures.at(name) = nullptr;
+			glDeleteTextures(1, map_gluints.at(name).get());
+			map_gluints.at(name) = nullptr;
 		}
 	}
 
@@ -1324,11 +1333,11 @@ namespace jep
 		const string &name,
 		boost::shared_ptr<ogl_context> &existing_context,
 		boost::shared_ptr<texture_handler> &existing_textures, 
-		const string &diffuse_name, 
-		const string &bump_name, 
-		const string &normal_name, 
-		const string &transparency_name, 
-		const string &specular_name)
+		const string &diffuse_filename, 
+		const string &bump_filename,
+		const string &normal_filename,
+		const string &transparency_filename,
+		const string &specular_filename)
 	{
 		initializeTextureData();
 
@@ -1336,11 +1345,11 @@ namespace jep
 		textures = existing_textures;
 		material_name = name;
 
-		setTextureData("diffuse", diffuse_name);
-		setTextureData("bump", bump_name);
-		setTextureData("normal", normal_name);
-		setTextureData("transparency", transparency_name);
-		setTextureData("specular", specular_name);
+		setTextureData("diffuse", diffuse_filename);
+		setTextureData("bump", bump_filename);
+		setTextureData("normal", normal_filename);
+		setTextureData("transparency", transparency_filename);
+		setTextureData("specular", specular_filename);
 
 		if (texture_gluints.at("diffuse").get())
 		{
@@ -1400,17 +1409,18 @@ namespace jep
 		}
 	}
 
-	void material_data::setTextureData(const string &map_handler, const string &texture_name)
+	void material_data::setTextureData(const string &map_handle, const string &texture_handle)
 	{
-		if (map_statuses.find(map_handler) == map_statuses.end())
+		if (map_statuses.find(map_handle) == map_statuses.end())
 			return;
 
-		boost::shared_ptr<GLuint> texture_pointer = textures->addTexture(texture_name);
+		boost::shared_ptr<GLuint> texture_pointer = textures->getTexture(texture_handle);
+
 		if (texture_pointer.get())
 		{
-			map_statuses.at(map_handler) = true;
-			texture_gluints.at(map_handler) = texture_pointer;
-			texture_names.at(map_handler) = texture_name;
+			map_statuses.at(map_handle) = true;
+			texture_gluints.at(map_handle) = texture_pointer;
+			texture_names.at(map_handle) = texture_handle;
 		}
 	}
 

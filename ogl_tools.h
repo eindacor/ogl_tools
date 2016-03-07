@@ -554,19 +554,21 @@ namespace jep
 		texture_handler(const string &default_path){ default_file_path = default_path; }
 		~texture_handler();
 
-		boost::shared_ptr<GLuint> addTexture(const string &file_name);
-		boost::shared_ptr<GLuint> addTexture(const string &file_name, const string &file_path);
-		boost::shared_ptr<GLuint> getTexture(const string &name);
+		boost::shared_ptr<GLuint> addTextureByFilename(const string &texture_handle, const string &file_name);
+		boost::shared_ptr<GLuint> addTextureByPath(const string &texture_handle, const string &file_path);
+		boost::shared_ptr<GLuint> getTexture(const string &texture_handle);
 
 		void addTextureUnloaded(const string &file_name, const string &file_path);
 		void addTextureUnloaded(const string &file_name);
 		void unloadTexture(const string &name);
 
-		std::map<string, std::pair<string, boost::shared_ptr<GLuint> > > getTextures() const { return saved_textures; }
-
 	private:
-		//texture name {file path, GLuint}
-		std::map<string, std::pair<string, boost::shared_ptr<GLuint> > > saved_textures;
+		// map handle, gluint
+		std::map<string, boost::shared_ptr<GLuint> > map_gluints;
+
+		//path, map handle
+		std::map<string, string> map_paths;
+
 		string default_file_path;
 	};
 
@@ -877,7 +879,7 @@ namespace jep
 		void setShader() const;
 		bool overrideMap(const string &map_handle, const boost::shared_ptr<GLuint> &new_gluint);
 
-		void setTextureData(const string &map_handler, const string &texture_name);
+		void setTextureData(const string &map_handle, const string &texture_handle);
 
 	private:
 		string material_name;
