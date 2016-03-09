@@ -1015,6 +1015,12 @@ namespace jep
 		else return it->second;
 	}
 
+	void material_data::setMapStatus(const string &map_handle, bool b)
+	{
+		if (map_statuses.find(map_handle) != map_statuses.end())
+			map_statuses.at(map_handle) = b;
+	}
+
 	mtl_contents::mtl_contents(const char* mtl_file, boost::shared_ptr<texture_handler> &textures, const boost::shared_ptr<ogl_context> &context)
 	{
 		std::fstream file;

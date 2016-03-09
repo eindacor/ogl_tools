@@ -110,7 +110,7 @@ namespace jep
 	class ogl_camera
 	{
 	public:
-		ogl_camera(const boost::shared_ptr<key_handler> &kh, const boost::shared_ptr<ogl_context> &context, glm::vec3 position, glm::vec3 focus, float fov);
+		ogl_camera(const boost::shared_ptr<key_handler> &kh, const boost::shared_ptr<ogl_context> &context, const glm::vec3 &position, const glm::vec3 &focus, float fov);
 		~ogl_camera(){};
 
 		void setViewMatrix(const glm::mat4 &vm) { view_matrix = vm; }
@@ -140,6 +140,8 @@ namespace jep
 
 		glm::vec3 camera_focus;
 		glm::vec3 camera_position;
+
+		float camera_fov;
 	};
 
 	/*
@@ -170,7 +172,7 @@ namespace jep
 	class ogl_camera_free : public ogl_camera
 	{
 	public:
-		ogl_camera_free(const boost::shared_ptr<key_handler> &kh, const boost::shared_ptr<ogl_context> &context, glm::vec3 position, float fov) :
+		ogl_camera_free(const boost::shared_ptr<key_handler> &kh, const boost::shared_ptr<ogl_context> &context, const glm::vec3 &position, float fov) :
 			ogl_camera(kh, context, position, glm::vec3(position.x, position.y, position.z - 10.0f), fov)
 		{
 			strafe_distance = .1f;
@@ -855,6 +857,7 @@ namespace jep
 		const string getMaterialName() const { return material_name; }
 		const vector<float> getData(DATA_TYPE dt) const;
 
+		void setMapStatus(const string &map_handle, bool b);
 		void setBumpValue(const float &f) { bump_value = glm::clamp(f, 0.0f, 1.0f); }
 		void setSpecularValue(const float &f) { specular_value = glm::clamp(f, 0.0f, 1.0f); }
 		void setGlobalTransparency(const float &f) { global_transparency = glm::clamp(f, 0.0f, 1.0f); }
@@ -865,9 +868,8 @@ namespace jep
 
 		boost::shared_ptr<GLuint> getGluint(const string &map_handle) const;
 		string getTextureName(const string &map_handle) const;
-		bool getMapStatus(const string &map_handle) const;
 
-		std::pair<string, bool> getMapData(const string &map_handle);
+		bool getMapStatus(const string &map_handle) const;
 		float getBumpValue() const { return bump_value; }
 		float getSpecularValue() const { return specular_value; }
 		float getGlobalTransparency() const { return global_transparency; }

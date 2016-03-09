@@ -390,8 +390,9 @@ namespace jep
 		return *(glint_map.at(name));
 	}
 
-	ogl_camera::ogl_camera(const boost::shared_ptr<key_handler> &kh, const boost::shared_ptr<ogl_context> &context, glm::vec3 position, glm::vec3 focus, float fov)
+	ogl_camera::ogl_camera(const boost::shared_ptr<key_handler> &kh, const boost::shared_ptr<ogl_context> &context, const glm::vec3 &position, const glm::vec3 &focus, float fov)
 	{
+		camera_fov = fov;
 		camera_focus = focus;
 		camera_position = position;
 		aspect_scale = (float)context->getWindowWidth() / (float)context->getWindowHeight();
@@ -403,7 +404,7 @@ namespace jep
 			glm::vec3(focus.x, focus.y, focus.z),			//position of focal point
 			glm::vec3(0, 1, 0));								//up axis
 
-		projection_matrix = glm::perspective(fov, aspect_scale, .1f, 150.0f);
+		projection_matrix = glm::perspective(camera_fov, aspect_scale, .1f, 150.0f);
 		aspect_scale_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f / context->getAspectRatio(), 1.0f, 1.0f));
 	}
 
