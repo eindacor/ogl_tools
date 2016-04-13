@@ -215,7 +215,7 @@ namespace jep
 	}
 
 	ogl_context::ogl_context(std::string title, std::string vert_file, std::string frag_file,
-		int width, int height)
+		int width, int height, bool raw_string_shaders)
 	{
 		window_width = width;
 		window_height = height;
@@ -262,7 +262,7 @@ namespace jep
 		}
 
 		//TODO make values of each ID variable
-		program_ID = createProgram(vert_file, frag_file);	
+		program_ID = createProgram(vert_file, frag_file, raw_string_shaders);
 
 		//z-buffer functions, prevent close objects being clipped by far objects
 		glEnable(GL_DEPTH_TEST);
@@ -293,19 +293,26 @@ namespace jep
 			std::cout << *i << std::endl;
 	}
 
-	GLuint ogl_context::createShader(std::string file, GLenum type)
+	GLuint ogl_context::createShader(std::string file, GLenum type, bool raw_string)
 	{
 		GLuint target_ID = glCreateShader(type);
 
 		std::string code_string;
-		//convert glsl file into a string
-		std::ifstream shader_file;
-		shader_file.open(file, std::ifstream::in);
-		while (shader_file.good())
+
+		if (raw_string)
+			code_string = file;
+
+		else
 		{
-			std::string line;
-			std::getline(shader_file, line);
-			code_string += line + '\n';
+			//convert glsl file into a string
+			std::ifstream shader_file;
+			shader_file.open(file, std::ifstream::in);
+			while (shader_file.good())
+			{
+				std::string line;
+				std::getline(shader_file, line);
+				code_string += line + '\n';
+			}
 		}
 
 		//create const char* from string of code
@@ -341,12 +348,12 @@ namespace jep
 		return target_ID;
 	}
 
-	GLuint ogl_context::createProgram(std::string vert_file, std::string frag_file)
+	GLuint ogl_context::createProgram(std::string vert_file, std::string frag_file, bool raw_string_shaders)
 	{
 		//create program handle
 		GLuint program_ID = glCreateProgram();
-		GLuint fragment_shader_ID = createShader(frag_file, GL_FRAGMENT_SHADER);
-		GLuint vertex_shader_ID = createShader(vert_file, GL_VERTEX_SHADER);
+		GLuint fragment_shader_ID = createShader(frag_file, GL_FRAGMENT_SHADER, raw_string_shaders);
+		GLuint vertex_shader_ID = createShader(vert_file, GL_VERTEX_SHADER, raw_string_shaders);
 
 		//attach shaders, link program
 		glAttachShader(program_ID, fragment_shader_ID);

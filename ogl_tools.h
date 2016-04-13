@@ -52,7 +52,7 @@ namespace jep
 	{
 	public:
 		ogl_context(std::string title, std::string vert_file, std::string frag_file,
-			int window_width, int window_height);
+			int window_width, int window_height, bool raw_string_shaders = false);
 		~ogl_context();
 
 		void printErrors();
@@ -87,8 +87,8 @@ namespace jep
 		void setBackgroundColor(glm::vec4 color) { glClearColor(color.x, color.y, color.z, color.w); background_color = color; }
 
 	private:
-		GLuint createShader(std::string file, GLenum type);
-		GLuint createProgram(std::string vert_file, std::string frag_file);
+		GLuint createShader(std::string file, GLenum type, bool raw_string);
+		GLuint createProgram(std::string vert_file, std::string frag_file, bool raw_string_shaders);
 
 		GLint element_color_ID;
 		glm::vec4 background_color;
