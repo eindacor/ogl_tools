@@ -717,6 +717,226 @@ namespace jep
 		setViewMatrix(view_matrix);
 	}
 
+	void ogl_camera_flying::stepCamera(float dist)
+	{
+		glm::vec3 camera_location = getPosition();
+		glm::vec3 camera_focus = getFocus();
+
+		glm::vec3 camera_direction = getCameraDirectionVector();
+
+		glm::mat4 step_translation = glm::translate(glm::mat4(1.0f), camera_direction * step_distance);
+
+		glm::vec4 new_location = step_translation * glm::vec4(camera_location.x, camera_location.y, camera_location.z, 1.0f);
+		glm::vec4 new_focus = step_translation * glm::vec4(camera_focus.x, camera_focus.y, camera_focus.z, 1.0f);
+
+		setFocus(glm::vec3(new_focus.x, new_focus.y, new_focus.z));
+		setPosition(glm::vec3(new_location.x, new_location.y, new_location.z));
+	}
+
+	void ogl_camera_flying::twistCamera(float dist)
+	{
+		glm::vec4 camera_location = glm::vec4(getPosition(), 1.0f);
+		glm::vec4 camera_focus = glm::vec4(getFocus(), 1.0f);
+
+		glm::mat4 original_translate = glm::translate(
+			glm::mat4(1.0f), glm::vec3(camera_location.x, camera_location.y, camera_location.z));
+		glm::vec4 delta_vec(camera_focus - camera_location);
+		float angle = getLineAngle(glm::vec2(camera_location.x, camera_location.z),
+			glm::vec2(camera_focus.x, camera_focus.z), true);
+		angle -= 90.0f;
+
+		// must be negative distance because opengl uses right-handed coordinates
+		glm::vec4 step_offset(-1.0f * dist, 0.0f, 0.0f, 1.0f);
+		float radians = angle * 0.0174533;
+		glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), radians, glm::vec3(0.0f, 1.0f, 0.0f));
+
+		glm::vec4 new_location = rotation * step_offset;
+		camera_location = original_translate * new_location;
+		glm::mat4 focus_translation = glm::translate(glm::mat4(1.0f), glm::vec3(delta_vec.x, delta_vec.y, delta_vec.z));
+		camera_focus = focus_translation * camera_location;
+
+		setFocus(glm::vec3(camera_focus.x, camera_focus.y, camera_focus.z));
+		setPosition(glm::vec3(camera_location.x, camera_location.y, camera_location.z));
+	}
+
+	void ogl_camera_flying::rotateCamera(float degrees)
+	{
+		glm::vec4 camera_location = glm::vec4(getPosition(), 1.0f);
+		glm::vec4 camera_focus = glm::vec4(getFocus(), 1.0f);
+
+		camera_focus = rotatePointAroundOrigin(
+			camera_focus, camera_location, degrees, glm::vec3(0.0f, 1.0f, 0.0f));
+
+		camera_rotation += degrees;
+
+		if (camera_rotation > 360.f)
+			camera_rotation -= 360.0f;
+
+		if (camera_rotation < 0.0f)
+			camera_rotation += 360.0f;
+
+		setFocus(glm::vec3(camera_focus.x, camera_focus.y, camera_focus.z));
+	}
+
+	void ogl_camera_flying::tiltCamera(float degrees)
+	{
+		glm::vec4 camera_location = glm::vec4(getPosition(), 1.0f);
+		glm::vec4 camera_focus = glm::vec4(getFocus(), 1.0f);
+
+		if (abs(camera_tilt + degrees) < 90.0f)
+		{
+			glm::vec4 axis_point = rotatePointAroundOrigin(
+				camera_focus, camera_location, -90.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+			glm::vec3 axis(axis_point.x - camera_location.x, 0.0f, axis_point.z - camera_location.z);
+
+			camera_focus = rotatePointAroundOrigin(
+				camera_focus, camera_location, degrees, axis);
+
+			camera_tilt += degrees;
+
+			setFocus(glm::vec3(camera_focus.x, camera_focus.y, camera_focus.z));
+		}
+	}
+
+	void ogl_camera_flying::move(signed short n)
+	{
+		if (n == 0)
+		{
+			move_forward = false;
+			move_backward = false;
+			return;
+		}
+
+		else if (n < 0)
+			move_forward = false;
+
+		else if (n > 0)
+			move_forward = true;
+
+		move_backward = !move_forward;
+
+		if (print_movement)
+			cout << "move: " << n << endl;
+	}
+
+	void ogl_camera_flying::rotate(signed short n)
+	{
+		if (n == 0)
+		{
+			rotate_left = false;
+			rotate_right = false;
+			return;
+		}
+
+		else if (n < 0)
+			rotate_left = true;
+
+		else if (n > 0)
+			rotate_left = false;
+
+		rotate_right = !rotate_left;
+
+		if (print_movement)
+			cout << "rotate: " << n << endl;
+	}
+
+	void ogl_camera_flying::tilt(signed short n)
+	{
+		if (n == 0)
+		{
+			tilt_up = false;
+			tilt_down = false;
+			return;
+		}
+
+		else if (n < 0)
+			tilt_up = false;
+
+		else if (n > 0)
+			tilt_up = true;
+
+		tilt_down = !tilt_up;
+
+		if (print_movement)
+			cout << "tilt: " << n << endl;
+	}
+
+	void ogl_camera_flying::strafe(signed short n)
+	{
+		if (n == 0)
+		{
+			strafe_left = false;
+			strafe_right = false;
+			return;
+		}
+
+		else if (n < 0)
+			strafe_left = true;
+
+		else if (n > 0)
+			strafe_left = false;
+
+		strafe_right = !strafe_left;
+
+		if (print_movement)
+			cout << "strafe: " << n << endl;
+	}
+
+	void ogl_camera_flying::updateCamera()
+	{
+		if (getKeys()->checkPress(GLFW_KEY_A) || getKeys()->checkPress(GLFW_KEY_D))
+			getKeys()->checkPress(GLFW_KEY_D) ? strafe(1) : strafe(-1);
+
+		else strafe(0);
+
+		if (getKeys()->checkPress(GLFW_KEY_S) || getKeys()->checkPress(GLFW_KEY_W))
+			getKeys()->checkPress(GLFW_KEY_S) ? move(-1) : move(1);
+
+		else move(0);
+
+		if (getKeys()->checkPress(GLFW_KEY_UP) || getKeys()->checkPress(GLFW_KEY_DOWN))
+			getKeys()->checkPress(GLFW_KEY_UP) ? tilt(1) : tilt(-1);
+
+		else tilt(0);
+
+		if (getKeys()->checkPress(GLFW_KEY_LEFT) || getKeys()->checkPress(GLFW_KEY_RIGHT))
+			getKeys()->checkPress(GLFW_KEY_LEFT) ? rotate(1) : rotate(-1);
+
+		else rotate(0);
+
+
+		if (move_forward)
+			stepCamera(step_distance);
+
+		else if (move_backward)
+			stepCamera(step_distance * -1.0f);
+
+		if (rotate_left)
+			rotateCamera(rotate_angle * -1.0f);
+
+		else if (rotate_right)
+			rotateCamera(rotate_angle);
+
+		if (tilt_up)
+			tiltCamera(tilt_angle);
+
+		else if (tilt_down)
+			tiltCamera(tilt_angle * -1.0f);
+
+		if (strafe_left)
+			twistCamera(strafe_distance * -1.0f);
+
+		else if (strafe_right)
+			twistCamera(strafe_distance);
+
+		glm::mat4 view_matrix = glm::lookAt(
+			glm::vec3(getPosition().x, getPosition().y, getPosition().z),	//position of camera
+			glm::vec3(getFocus().x, getFocus().y, getFocus().z),		//position of focal point
+			glm::vec3(0, 1, 0));
+
+		setViewMatrix(view_matrix);
+	}
+
 	bool key_handler::checkPress(int key, bool include_held)
 	{
 		if (keys.find(key) == keys.end())

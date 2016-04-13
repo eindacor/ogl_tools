@@ -125,6 +125,8 @@ namespace jep
 		void setFocus(glm::vec3 focus) { camera_focus = focus; }
 		void setPosition(glm::vec3 position) { camera_position = position; }
 
+		const glm::vec3 getCameraDirectionVector() const { return glm::normalize(camera_focus - camera_position); }
+
 		virtual void updateCamera();
 
 	private:
@@ -173,7 +175,7 @@ namespace jep
 	{
 	public:
 		ogl_camera_free(const boost::shared_ptr<key_handler> &kh, const boost::shared_ptr<ogl_context> &context, const glm::vec3 &position, float fov) :
-			ogl_camera(kh, context, position, glm::vec3(position.x, position.y, position.z - 10.0f), fov)
+			ogl_camera(kh, context, position, glm::vec3(position.x, position.y, position.z - 100.0f), fov)
 		{
 			strafe_distance = .1f;
 			step_distance = .1f;
@@ -202,6 +204,69 @@ namespace jep
 
 		void stepCamera(float dist);
 		void strafeCamera(float dist);
+		void rotateCamera(float degrees);
+		void tiltCamera(float degrees);
+
+		float camera_tilt;
+		float camera_rotation;
+
+		void move(signed short n);
+		void rotate(signed short n);
+		void tilt(signed short n);
+		void strafe(signed short n);
+
+	private:
+		float strafe_distance;
+		float step_distance;
+		float tilt_angle;
+		float rotate_angle;
+
+		bool move_forward;
+		bool move_backward;
+		bool rotate_left;
+		bool rotate_right;
+		bool tilt_up;
+		bool tilt_down;
+		bool strafe_left;
+		bool strafe_right;
+		bool print_movement = false;
+	};
+
+	//ogl_camera_free is a specific derived class of ogl_camera that allows keyboard inputs to modify the position
+	//TODO enable customization of stepping distances
+	class ogl_camera_flying : public ogl_camera
+	{
+	public:
+		ogl_camera_flying(const boost::shared_ptr<key_handler> &kh, const boost::shared_ptr<ogl_context> &context, const glm::vec3 &position, float fov) :
+			ogl_camera(kh, context, position, glm::vec3(position.x, position.y, position.z - 100.0f), fov)
+		{
+			strafe_distance = .1f;
+			step_distance = .1f;
+			tilt_angle = 2.0f;
+			rotate_angle = 2.0f;
+
+			camera_tilt = 0.0f;
+			camera_rotation = 0.0f;
+
+			move_forward = false;
+			move_backward = false;
+			rotate_left = false;
+			rotate_right = false;
+			tilt_up = false;
+			tilt_down = false;
+			strafe_left = false;
+			strafe_right = false;
+		}
+
+		~ogl_camera_flying() {};
+
+		void printErrors();
+
+		virtual void updateCamera();
+		void setPrintMovement(bool b) { print_movement = b; }
+
+		void stepCamera(float dist);
+		void twistCamera(float dist);
 		void rotateCamera(float degrees);
 		void tiltCamera(float degrees);
 
