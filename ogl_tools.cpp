@@ -731,7 +731,7 @@ namespace jep
 
 		glm::vec3 camera_direction = getCameraDirectionVector();
 
-		glm::mat4 step_translation = glm::translate(glm::mat4(1.0f), camera_direction * step_distance);
+		glm::mat4 step_translation = glm::translate(glm::mat4(1.0f), camera_direction * dist);
 
 		glm::vec4 new_location = step_translation * glm::vec4(camera_location.x, camera_location.y, camera_location.z, 1.0f);
 		glm::vec4 new_focus = step_translation * glm::vec4(camera_focus.x, camera_focus.y, camera_focus.z, 1.0f);
