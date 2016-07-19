@@ -365,6 +365,9 @@ namespace jep
 
 		bool checkPress(int key, bool hold = true);
 		bool checkMouse(int key, bool hold = true);
+		bool checkShiftHold() { return checkPress(GLFW_KEY_LEFT_SHIFT, true) || checkPress(GLFW_KEY_RIGHT_SHIFT, true); }
+		bool checkCtrlHold() { return checkPress(GLFW_KEY_LEFT_CONTROL, true) || checkPress(GLFW_KEY_RIGHT_CONTROL, true); }
+		bool checkAltHold() { return checkPress(GLFW_KEY_LEFT_ALT, true) || checkPress(GLFW_KEY_RIGHT_ALT, true); }
 		glm::vec2 getCursorPosition() { 
 			updateCursorPosition(); return glm::vec2(x_window_position, y_window_position); }
 
