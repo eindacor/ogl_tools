@@ -82,7 +82,7 @@ namespace jep
 		int getWindowHeight() const { return window_height; }
 		int getWindowWidth() const { return window_width; }
 
-		GLint ogl_context::getShaderGLint(GLchar* name);
+		GLint getShaderGLint(GLchar* name);
 
 		void setBackgroundColor(glm::vec4 color) { glClearColor(color.x, color.y, color.z, color.w); background_color = color; }
 
@@ -201,6 +201,10 @@ namespace jep
 
 		virtual void updateCamera();
 		void setPrintMovement(bool b) { print_movement = b; }
+		void setStepDistance(float f) { step_distance = f; }
+		void setRotateAngle(float f) { rotate_angle = f; }
+		void setTiltAngle(float f) { tilt_angle = f; }
+		void setStrafeDistance(float f) { strafe_distance = f; }
 
 		void stepCamera(float dist);
 		void strafeCamera(float dist);
@@ -721,7 +725,7 @@ namespace jep
 
 		vector<float> getAllData() const { return all_data; }
 
-		bool operator == (const vertex_data &other);
+		bool operator == (const vertex_data &other) const;
 		bool operator != (const vertex_data &other) { return !((*this) == other); }
 
 		float x, y, z, w;
@@ -774,17 +778,9 @@ namespace jep
 		const int getInterleaveVTOffset() const { return interleave_vt_offset; }
 		const int getInterleaveVNOffset() const { return interleave_vn_offset; }
 		const vector<float> getInterleaveData() const;
-		//void getIndexedVertexData(const vector<unsigned short> &indices, vector<float> &v_data, vector<float> &vt_data, vector<float> &vn_data) const;
 		const vector<float> getIndexedVertexData(vector<unsigned short> &indices) const;
 		const vector<float> getIndexedVertexData() const;
-
-		//const vector<float> getIndexedTangentData(vector<unsigned short> &indices) const;
-		//const vector<float> getIndexedBiangentData(vector<unsigned short> &indices) const;
-
 		const vector<unsigned short> getElementIndex() const { return element_index; }
-
-		//vector< vector<float> > getTriangles();
-		//vector< vector<float> > getQuads();
 
 		//returns # of floats per vertex type
 		const int getVSize() const { return v_size; }
@@ -803,8 +799,6 @@ namespace jep
 		const vector<float> getVNData() const { return all_vn_data; }
 		const vector<float> getVPData() const { return all_vp_data; }
 
-		//const vector<float> getData(DATA_TYPE) const;
-
 		//modifyPosition does not affect normals
 		void modifyPosition(const glm::mat4 &translation_matrix);
 		//rotate modifies position data and normals
@@ -814,6 +808,8 @@ namespace jep
 		vector< std::pair<glm::vec3, glm::vec3> > getMeshEdgesVec3() const;
 		vector< vector<glm::vec4> >getMeshTrianglesVec4() const;
 		vector< vector<glm::vec3> >getMeshTrianglesVec3() const;
+
+		map<unsigned short, vertex_data> getVertexMap() const { return vertex_map; }
 
 		void setMeshData();
 
@@ -878,6 +874,8 @@ namespace jep
 		const vector<mesh_data> getMeshes() const { return meshes; }
 
 		vector<string> getErrors() const { return error_log; }
+
+		vector<glm::vec4> getAllVerticesOfAllMeshes() const;
 
 		const string getMTLFilename() const { return mtl_filename; }
 

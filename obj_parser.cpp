@@ -2,7 +2,7 @@
 
 namespace jep
 {
-	bool vertex_data::operator == (const vertex_data &other)
+	bool vertex_data::operator == (const vertex_data &other) const
 	{
 		if (getUVOffset() != other.getUVOffset())
 			return false;
@@ -201,21 +201,21 @@ namespace jep
 			addTangentBitangent(tangent_bitangent);
 		}
 
-		for (auto i : data)
+		for (const auto &vertex : data)
 		{
 			bool match_found = false;
 
 			//TODO use find methods instead of iterating through all vertices
-			for (auto j : vertex_map)
+			for (const auto &vertex_pair : vertex_map)
 			{
-				if (i == j.second)
+				if (vertex == vertex_pair.second)
 				{
-					element_index.push_back(j.first);
+					element_index.push_back(vertex_pair.first);
 					match_found = true;
 
 					//average tangents found with new tangents
-					tangent_map[j.first] += tangent_bitangent[0];
-					bitangent_map[j.first] += tangent_bitangent[1];
+					tangent_map[vertex_pair.first] += tangent_bitangent[0];
+					bitangent_map[vertex_pair.first] += tangent_bitangent[1];
 
 					break;
 				}
@@ -227,7 +227,7 @@ namespace jep
 				unsigned short new_index = vertex_map.size();
 				element_index.push_back(new_index);
 
-				std::pair<unsigned short, vertex_data> vertex_to_add(new_index, i);
+				std::pair<unsigned short, vertex_data> vertex_to_add(new_index, vertex);
 				vertex_map.insert(vertex_to_add);
 
 				std::pair<unsigned short, glm::vec3> tangent_to_add(new_index, tangent_bitangent[0]);
@@ -271,55 +271,6 @@ namespace jep
 		}
 		return interleave_data;
 	}
-
-	/*
-	void mesh_data::getIndexedVertexData(const vector<unsigned short> &indices, vector<float> &v_data, vector<float> &vt_data, vector<float> &vn_data) const
-	{
-	vector<float> interleaved_vertices = getInterleaveData();
-	v_data.clear();
-	vt_data.clear();
-	vn_data.clear();
-
-	vector<vertex_data> all_vertices;
-
-	for (auto i : faces)
-	{
-	all_vertices.push_back(i.at(0));
-	all_vertices.push_back(i.at(1));
-	all_vertices.push_back(i.at(2));
-	}
-
-	map<unsigned short, vertex_data > vertex_map;
-
-	for (auto vertex : all_vertices)
-	{
-	bool match_found = false;
-	for (auto i : vertex_map)
-	{
-	if (vertex == i.second)
-	{
-	match_found = true;
-	indices.push_back(i.first);
-	break;
-	}
-	}
-
-	if (!match_found)
-	{
-	unsigned short new_index = vertex_map.size();
-	indices.push_back(new_index);
-	vector<float> v_data_to_add = vertex.getVData();
-	vector<float> vt_data_to_add = vertex.getVTData();
-	vector<float> vn_data_to_add = vertex.getVNData();
-	v_data.insert(v_data.end(), v_data_to_add.begin(), v_data_to_add.end());
-	vt_data.insert(vt_data.end(), vt_data_to_add.begin(), vt_data_to_add.end());
-	vn_data.insert(vn_data.end(), vn_data_to_add.begin(), vn_data_to_add.end());
-
-	vertex_map.insert(std::pair<unsigned short, vertex_data>(new_index, vertex));
-	}
-	}
-	}
-	*/
 
 	const vector<float> mesh_data::getIndexedVertexData() const
 	{
@@ -404,7 +355,7 @@ namespace jep
 			}
 		}
 
-		for (auto i : vertex_map)
+		for (auto &i : vertex_map)
 			i.second.modifyPosition(translation_matrix);
 	}
 
@@ -736,6 +687,23 @@ namespace jep
 		for (vector<mesh_data>::iterator it = meshes.begin(); it != meshes.end(); it++)
 			it->setMeshData();
 	}
+
+	// added for gen art project, used to generate matrices from a pre-made model
+	vector<glm::vec4> obj_contents::getAllVerticesOfAllMeshes() const
+	{
+		vector<glm::vec4> all_vertices;
+		for (const mesh_data &mesh : meshes)
+		{
+			map<unsigned short, vertex_data> vertex_map = mesh.getVertexMap();
+			for (const std::pair<unsigned short, vertex_data> &vertex_pair : vertex_map)
+			{
+				all_vertices.push_back(vertex_pair.second.xyzw);
+			}
+		}
+
+		return all_vertices;
+	}
+
 	vector<glm::vec3> mesh_data::calcTangentBitangent(const vector<vertex_data> &face_data)
 	{
 		vertex_data v_data_0 = face_data[0];
