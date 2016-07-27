@@ -274,6 +274,11 @@ namespace jep
 		void rotateCamera(float degrees);
 		void tiltCamera(float degrees);
 
+		void setStepDistance(float f) { step_distance = f; }
+		void setRotateAngle(float f) { rotate_angle = f; }
+		void setTiltAngle(float f) { tilt_angle = f; }
+		void setStrafeDistance(float f) { strafe_distance = f; }
+
 		float camera_tilt;
 		float camera_rotation;
 
