@@ -411,7 +411,7 @@ namespace jep
 			glm::vec3(focus.x, focus.y, focus.z),			//position of focal point
 			glm::vec3(0, 1, 0));								//up axis
 
-		projection_matrix = glm::perspective(camera_fov, aspect_scale, .1f, 150.0f);
+		setFOV(camera_fov);
 		aspect_scale_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f / context->getAspectRatio(), 1.0f, 1.0f));
 	}
 
@@ -428,7 +428,7 @@ namespace jep
 	void ogl_camera::setMVP(const boost::shared_ptr<ogl_context> &context, const glm::mat4 &model_matrix, const render_type &rt)
 	{
 
-		if (current_render_type == rt && model_matrix == previous_model_matrix && previous_view_matrix == view_matrix) {
+		if (current_render_type == rt && model_matrix == previous_model_matrix && previous_view_matrix == view_matrix && previous_projection_matrix == projection_matrix) {
 			return;
 		}
 
@@ -441,12 +441,14 @@ namespace jep
 		case NORMAL:
 			previous_model_matrix = model_matrix;
 			previous_view_matrix = view_matrix;
+			previous_projection_matrix = projection_matrix;
 			glUniform1i(context->getShaderGLint("use_lighting"), true);
 			MVP = projection_matrix * view_matrix * model_matrix;
 			MV = glm::mat3(view_matrix * model_matrix);
 			glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
 			glUniformMatrix4fv(context->getShaderGLint("model_matrix"), 1, GL_FALSE, &model_matrix[0][0]);
 			glUniformMatrix4fv(context->getShaderGLint("view_matrix"), 1, GL_FALSE, &view_matrix[0][0]);
+			glUniformMatrix4fv(context->getShaderGLint("projection_matrix"), 1, GL_FALSE, &projection_matrix[0][0]);
 			glUniformMatrix3fv(context->getShaderGLint("MV"), 1, GL_FALSE, &MV[0][0]);
 			break;
 
@@ -472,6 +474,10 @@ namespace jep
 			previous_model_matrix = model_matrix;
 			MVP = projection_matrix * view_matrix * model_matrix;
 			glUniformMatrix4fv(context->getShaderGLint("MVP"), 1, GL_FALSE, &MVP[0][0]);
+			glUniformMatrix4fv(context->getShaderGLint("model_matrix"), 1, GL_FALSE, &model_matrix[0][0]);
+			glUniformMatrix4fv(context->getShaderGLint("view_matrix"), 1, GL_FALSE, &view_matrix[0][0]);
+			glUniformMatrix4fv(context->getShaderGLint("projection_matrix"), 1, GL_FALSE, &projection_matrix[0][0]);
+			glUniformMatrix3fv(context->getShaderGLint("MV"), 1, GL_FALSE, &MV[0][0]);
 			break;
 		}
 	}

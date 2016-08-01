@@ -125,6 +125,8 @@ namespace jep
 		void setFocus(glm::vec3 focus) { camera_focus = focus; }
 		void setPosition(glm::vec3 position) { camera_position = position; }
 
+		void setFOV(float fov) { camera_fov = fov; projection_matrix = glm::perspective(glm::clamp(camera_fov, 1.0f, 180.0f) * 0.017453f, aspect_scale, .01f, 500.0f); }
+
 		const glm::vec3 getCameraDirectionVector() const { return glm::normalize(camera_focus - camera_position); }
 
 		virtual void updateCamera();
@@ -134,6 +136,7 @@ namespace jep
 		glm::mat4 projection_matrix;
 		glm::mat4 previous_model_matrix;
 		glm::mat4 previous_view_matrix;
+		glm::mat4 previous_projection_matrix;
 		glm::mat4 aspect_scale_matrix;
 		boost::shared_ptr<key_handler> keys;
 		float aspect_scale;
