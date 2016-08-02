@@ -247,7 +247,7 @@ namespace jep
 	{
 	public:
 		ogl_camera_flying(const boost::shared_ptr<key_handler> &kh, const boost::shared_ptr<ogl_context> &context, const glm::vec3 &position, float fov) :
-			ogl_camera(kh, context, position, glm::vec3(position.x, position.y, position.z - 100.0f), fov)
+			ogl_camera(kh, context, position, glm::vec3(position.x, position.y, position.z - 1.0f), fov)
 		{
 			strafe_distance = .1f;
 			step_distance = .1f;
