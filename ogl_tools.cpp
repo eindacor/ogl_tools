@@ -482,6 +482,15 @@ namespace jep
 		}
 	}
 
+	void ogl_camera::adjustFocalLength(float degree)
+	{
+		glm::vec3 focal_vector(camera_focus - camera_position);
+		focal_vector *= degree;
+		camera_focus = camera_position + focal_vector;
+
+		view_matrix = glm::lookAt(camera_position, camera_focus, glm::vec3(0, 1, 0));
+	}
+
 	/*
 	void ogl_camera_rigged::update()
 	{
