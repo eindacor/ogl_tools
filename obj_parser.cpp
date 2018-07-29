@@ -25,25 +25,28 @@ namespace jep
 		vector<float> other_v_data = other.getVData();
 		for (int i = 0; i < v_data.size(); i++)
 		{
-			float difference = v_data.at(i) - other_v_data.at(i);
-			if (abs(difference) > .000001f)
+			if (!floatsAreEqual(v_data.at(i), other_v_data.at(i)))
+			{
 				return false;
+			}
 		}
 
 		vector<float> other_vt_data = other.getVTData();
 		for (int i = 0; i < vt_data.size(); i++)
 		{
-			float difference = vt_data.at(i) - other_vt_data.at(i);
-			if (abs(difference) > .000001f)
+			if (!floatsAreEqual(vt_data.at(i), other_vt_data.at(i)))
+			{
 				return false;
+			}
 		}
 
 		vector<float> other_vn_data = other.getVNData();
 		for (int i = 0; i < vn_data.size(); i++)
 		{
-			float difference = vn_data.at(i) - other_vn_data.at(i);
-			if (abs(difference) > .000001f)
+			if (!floatsAreEqual(vn_data.at(i), other_vn_data.at(i)))
+			{
 				return false;
+			}
 		}
 
 		return true;

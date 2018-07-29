@@ -2,6 +2,16 @@
 
 namespace jep
 {
+	const bool floatsAreEqual(float first, float second)
+	{
+		return abs(second - first) < .00000001f;
+	}
+
+	void errorCallback(int error, const char* description)
+	{
+		puts(description);
+	}
+
 	const float getLineAngle(glm::vec2 first, glm::vec2 second, bool right_handed)
 	{
 		if (right_handed)
@@ -93,14 +103,17 @@ namespace jep
 		unsigned int image_size; // width * height * 3
 		//actual RGB data
 		unsigned char* data;
-		FILE * file = fopen(imagepath, "rb");
-		if (!file)
+
+		FILE *bmp_file;
+
+		errno_t error = fopen_s(&bmp_file, imagepath, "rb");
+		if (error != 0)
 		{
 			std::cout << imagepath << " could not be opened" << std::endl;
 			return;
 		}
 		//checks to verify that the header is a 54-byte header
-		if (fread(header, 1, 54, file) != 54)
+		if (fread(header, 1, 54, bmp_file) != 54)
 		{
 			std::cout << imagepath << " is not a correct BMP file" << std::endl;
 			return;
@@ -123,8 +136,8 @@ namespace jep
 			data_pos = 54;
 		data = new unsigned char[image_size];
 		//read actual data from the file into the buffer
-		fread(data, 1, image_size, file);
-		fclose(file);
+		fread(data, 1, image_size, bmp_file);
+		fclose(bmp_file);
 		//create opengl texture
 		glGenTextures(1, &textureID);
 		glBindTexture(GL_TEXTURE_2D, textureID);
@@ -157,25 +170,27 @@ namespace jep
 
 		unsigned char* data;
 
-		FILE * file = fopen(imagepath, "rb");
-		if (!file)
+		FILE *tif_file;
+
+		errno_t error = fopen_s(&tif_file, imagepath, "rb");
+		if (error != 0)
 		{
 			std::cout << imagepath << " could not be opened" << std::endl;
 			return;
 		}
 
 		long lCurPos, lEndPos;
-		lCurPos = ftell(file);
-		fseek(file, 0, 2);
-		lEndPos = ftell(file);
-		fseek(file, lCurPos, 0);
+		lCurPos = ftell(tif_file);
+		fseek(tif_file, 0, 2);
+		lEndPos = ftell(tif_file);
+		fseek(tif_file, lCurPos, 0);
 		file_size = lEndPos;
 
 		data = new unsigned char[file_size / sizeof(char)];
 
 		//read actual data from the file into the buffer
 		unsigned char header[18];
-		fread(header, 1, 18, file);
+		fread(header, 1, 18, tif_file);
 
 		ID_length = *(char*)&(header[0]);
 		color_map_type = *(char*)&(header[1]);
@@ -192,12 +207,12 @@ namespace jep
 
 		//advances fread buffer if an offset is indicated
 		unsigned char* data_offset = new unsigned char[first_map_index];
-		fread(data_offset, 1, first_map_index, file);
+		fread(data_offset, 1, first_map_index, tif_file);
 
 		unsigned int image_size = int(width) * int(height) * 3;
 
 		unsigned char* color_map = new unsigned char[image_size];
-		fread(color_map, 1, image_size, file);
+		fread(color_map, 1, image_size, tif_file);
 
 		//create opengl texture
 		glGenTextures(1, &textureID);
@@ -211,72 +226,103 @@ namespace jep
 		delete[] data;
 		delete[] data_offset;
 		delete[] color_map;
-		fclose(file);
+		fclose(tif_file);
 	}
 
 	ogl_context::ogl_context(std::string title, std::string vert_file, std::string frag_file,
 		int width, int height, bool raw_string_shaders)
 	{
-		window_width = width;
-		window_height = height;
-		aspect_ratio = (float)window_width / (float)window_height;
-		errors = false;
-		window_title = title;
-
-		//initialize GLFW
-		if (!glfwInit())
+		try
 		{
-			display_errors.push_back("glfw failed to initialize");
-			errors = true;
-		}
+			window_width = width;
+			window_height = height;
+			aspect_ratio = (float)window_width / (float)window_height;
+			errors = false;
+			window_title = title;
 
-		//version control/create window
-		else
-		{
-			glfwWindowHint(GLFW_SAMPLES, 4);
-			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-			window = glfwCreateWindow(width, height, &window_title[0], NULL, NULL);
-		}
-
-		//test window
-		if (errors == false && window == NULL)
-		{
-			display_errors.push_back("window returned NULL");
-			errors = true;
-		}
-
-		//make context current/initialize glew
-		if (errors == false)
-		{
-			glfwMakeContextCurrent(window);
-
-			glewExperimental = true;
-			if (glewInit() != GLEW_OK)
+			//initialize GLFW
+			if (!glfwInit())
 			{
-				display_errors.push_back("glew failed to initialize");
+				display_errors.push_back("glfw failed to initialize");
 				errors = true;
 			}
+			//version control/create window
+			else
+			{
+				GLFWerrorfun error_callback = errorCallback;
+				glfwSetErrorCallback(error_callback);
+				std::cout << "initializing window" << std::endl;
+				glfwWindowHint(GLFW_SAMPLES, 4);
+				glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+				glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
+				glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+				window = glfwCreateWindow(width, height, &window_title[0], NULL, NULL);
+
+				if (window == NULL)
+				{
+					const char* description;
+					glfwGetError(&description);
+					display_errors.push_back(description);
+					errors = true;
+				}
+			}
+
+			//test window
+			if (!errors && window == NULL)
+			{
+				display_errors.push_back("window returned NULL");
+				errors = true;
+			}
+
+			//make context current/initialize glew
+			if (!errors)
+			{
+				glfwMakeContextCurrent(window);
+
+				glewExperimental = true;
+				GLenum error = glewInit();
+				if (error != GLEW_OK)
+				{
+					display_errors.push_back("glew failed to initialize");
+					errors = true;
+				}
+			}
+
+			if (!errors)
+			{
+				//TODO make values of each ID variable
+				std::cout << "creating program" << std::endl;
+				program_ID = createProgram(vert_file, frag_file, raw_string_shaders);
+
+				//z-buffer functions, prevent close objects being clipped by far objects
+				std::cout << "enabling/disabling options" << std::endl;
+				glEnable(GL_DEPTH_TEST);
+				glDepthFunc(GL_LESS);
+				glEnable(GL_BLEND);
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			}
+
+			//glEnable(GL_CULL_FACE);
+
+			//create vertex buffer object, set clear color
+			if (!errors)
+			{
+				std::cout << "setting background" << std::endl;
+				background_color = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+				setBackgroundColor(background_color);
+			}
+
+			if (errors)
+			{
+				printErrors();
+				throw ogl_context_exception("context creation failed");
+			}
 		}
-
-		//TODO make values of each ID variable
-		program_ID = createProgram(vert_file, frag_file, raw_string_shaders);
-
-		//z-buffer functions, prevent close objects being clipped by far objects
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LESS);
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-		//glEnable(GL_CULL_FACE);
-
-		//create vertex buffer object, set clear color
-		if (errors == false)
+		catch (std::exception e)
 		{
-			background_color = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
-			setBackgroundColor(background_color);
+			printErrors();
+			throw ogl_context_exception(e.what());
 		}
 	}
 
@@ -351,23 +397,29 @@ namespace jep
 	GLuint ogl_context::createProgram(std::string vert_file, std::string frag_file, bool raw_string_shaders)
 	{
 		//create program handle
+		std::cout << "creating shaders" << std::endl;
 		GLuint program_ID = glCreateProgram();
+		std::cout << "created program: " << program_ID << std::endl;
+
 		GLuint fragment_shader_ID = createShader(frag_file, GL_FRAGMENT_SHADER, raw_string_shaders);
 		GLuint vertex_shader_ID = createShader(vert_file, GL_VERTEX_SHADER, raw_string_shaders);
 
 		//attach shaders, link program
+		std::cout << "attaching shaders" << std::endl;
 		glAttachShader(program_ID, fragment_shader_ID);
 		glAttachShader(program_ID, vertex_shader_ID);
 		glLinkProgram(program_ID);
 
 		//check link, return success/failure
 		GLint status;
+		std::cout << "getting link status" << std::endl;
 		glGetProgramiv(program_ID, GL_LINK_STATUS, &status);
 		if (status == GL_FALSE)
 		{
 			std::string error = "program failed to link: ";
 
 			GLint log_length;
+			std::cout << "getting log length" << std::endl;
 			glGetProgramiv(program_ID, GL_INFO_LOG_LENGTH, &log_length);
 			std::vector<char> info_log(log_length + 1);
 			glGetProgramInfoLog(program_ID, log_length, NULL, &info_log[0]);
@@ -380,18 +432,19 @@ namespace jep
 		}
 
 		//detach shaders when complete
+		std::cout << "detaching shaders" << std::endl;
 		glDetachShader(program_ID, fragment_shader_ID);
 		glDetachShader(program_ID, vertex_shader_ID);
 
 		return program_ID;
 	}
 
-	GLint ogl_context::getShaderGLint(GLchar* name)
+	GLint ogl_context::getShaderGLint(const char* name)
 	{
 		if (glint_map.find(name) == glint_map.end())
 		{
 			boost::shared_ptr<GLint> GLintID(new GLint(glGetUniformLocation(program_ID, name)));
-			glint_map.insert(std::pair<GLchar*, boost::shared_ptr<GLint> >(name, GLintID));		
+			glint_map.insert(std::pair<string, boost::shared_ptr<GLint> >(name, GLintID));		
 		}
 
 		return *(glint_map.at(name));
@@ -755,6 +808,20 @@ namespace jep
 		setPosition(glm::vec3(new_location.x, new_location.y, new_location.z));
 	}
 
+	void ogl_camera_flying::elevateCamera(float dist)
+	{
+		glm::vec3 camera_location = getPosition();
+		glm::vec3 camera_focus = getFocus();
+
+		glm::mat4 elevation_translation = glm::translate(glm::mat4(1.0f), vec3(0.0f, dist, 0.0f));
+
+		glm::vec4 new_location = elevation_translation * glm::vec4(camera_location.x, camera_location.y, camera_location.z, 1.0f);
+		glm::vec4 new_focus = elevation_translation * glm::vec4(camera_focus.x, camera_focus.y, camera_focus.z, 1.0f);
+
+		setFocus(glm::vec3(new_focus.x, new_focus.y, new_focus.z));
+		setPosition(glm::vec3(new_location.x, new_location.y, new_location.z));
+	}
+
 	void ogl_camera_flying::twistCamera(float dist)
 	{
 		glm::vec4 camera_location = glm::vec4(getPosition(), 1.0f);
@@ -841,6 +908,29 @@ namespace jep
 			cout << "move: " << n << endl;
 	}
 
+	void ogl_camera_flying::altitude(signed short n)
+	{
+		if (n == 0)
+		{
+			altitude_up = false;
+			altitude_down = false;
+			return;
+		}
+		else if (n < 0)
+		{
+			altitude_up = false;
+		}
+		else
+		{
+			altitude_up = true;
+		}
+
+		altitude_down = !altitude_up;
+
+		if (print_movement)
+			cout << "move: " << n << endl;
+	}
+
 	void ogl_camera_flying::rotate(signed short n)
 	{
 		if (n == 0)
@@ -907,49 +997,94 @@ namespace jep
 	void ogl_camera_flying::updateCamera()
 	{
 		if (getKeys()->checkPress(GLFW_KEY_A) || getKeys()->checkPress(GLFW_KEY_D))
+		{
 			getKeys()->checkPress(GLFW_KEY_D) ? strafe(1) : strafe(-1);
-
-		else strafe(0);
+		}
+		else
+		{
+			strafe(0);
+		}
 
 		if (getKeys()->checkPress(GLFW_KEY_S) || getKeys()->checkPress(GLFW_KEY_W))
-			getKeys()->checkPress(GLFW_KEY_S) ? move(-1) : move(1);
-
-		else move(0);
+		{
+			if (getKeys()->checkShiftHold())
+			{
+				getKeys()->checkPress(GLFW_KEY_S) ? altitude(-1) : altitude(1);
+			}
+			else
+			{
+				getKeys()->checkPress(GLFW_KEY_S) ? move(-1) : move(1);
+			}
+		}
+		else
+		{
+			move(0);
+			altitude(0);
+		}
 
 		if (getKeys()->checkPress(GLFW_KEY_UP) || getKeys()->checkPress(GLFW_KEY_DOWN))
+		{
 			getKeys()->checkPress(GLFW_KEY_UP) ? tilt(1) : tilt(-1);
-
-		else tilt(0);
+		}
+		else
+		{
+			tilt(0);
+		}
 
 		if (getKeys()->checkPress(GLFW_KEY_LEFT) || getKeys()->checkPress(GLFW_KEY_RIGHT))
+		{
 			getKeys()->checkPress(GLFW_KEY_LEFT) ? rotate(1) : rotate(-1);
-
-		else rotate(0);
+		}
+		else
+		{
+			rotate(0);
+		}
 
 
 		if (move_forward)
+		{
 			stepCamera(step_distance);
-
+		}
 		else if (move_backward)
+		{
 			stepCamera(step_distance * -1.0f);
+		}
+
+		if (altitude_up)
+		{
+			elevateCamera(step_distance);
+		}
+		else if (altitude_down)
+		{
+			elevateCamera(step_distance * -1.0f);
+		}
 
 		if (rotate_left)
+		{
 			rotateCamera(rotate_angle * -1.0f);
-
+		}
 		else if (rotate_right)
+		{
 			rotateCamera(rotate_angle);
+		}
 
 		if (tilt_up)
+		{
 			tiltCamera(tilt_angle);
-
+		}
 		else if (tilt_down)
+		{
 			tiltCamera(tilt_angle * -1.0f);
+		}
 
 		if (strafe_left)
+		{
 			twistCamera(strafe_distance * -1.0f);
-
+		}
 		else if (strafe_right)
+		{
 			twistCamera(strafe_distance);
+		}
 
 		glm::mat4 view_matrix = glm::lookAt(
 			glm::vec3(getPosition().x, getPosition().y, getPosition().z),	//position of camera
@@ -1743,7 +1878,9 @@ namespace jep
 
 		else glUniform1i(context->getShaderGLint("enable_specular_map"), 0);
 
-		glUniform1f(context->getShaderGLint("bump_value"), bump_value);
+		GLchar test = GLchar("bump_value");
+
+		glUniform1f(context->getShaderGLint(&test), bump_value);
 		glUniform1i(context->getShaderGLint("specular_dampening"), specular_dampening);
 		glUniform1f(context->getShaderGLint("specular_value"), specular_value);
 		glUniform3fv(context->getShaderGLint("specular_color"), 1, &specular_color[0]);

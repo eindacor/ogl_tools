@@ -1,8 +1,8 @@
 #ifndef OPENGL_TOOLS_H
 #define OPENGL_TOOLS_H
 
-#include <glew.h>
-#include <glfw3.h>
+#include <GL\glew.h>
+#include <GLFW\glfw3.h>
 #include <string>
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
@@ -10,8 +10,17 @@
 #include <map>
 #include <iostream>
 #include <fstream>
-#include <boost/smart_ptr/shared_ptr.hpp>
-#include "jep_util.h"
+#include <boost/shared_ptr.hpp>
+
+using std::vector;
+using std::string;
+using std::map;
+using std::cout;
+using std::endl;
+using std::pair;
+using glm::vec3;
+using glm::vec4;
+using glm::mat4;
 
 enum DATA_TYPE {
 	UNDEFINED_DATA_TYPE, OBJ_MTLLIB, OBJ_F, OBJ_V, OBJ_VT, OBJ_VN, OBJ_VP, OBJ_G, OBJ_USEMTL,
@@ -30,6 +39,7 @@ namespace jep
 	class material_data;
 	class mesh_data;
 	class obj_contents;
+	class ogl_context_exception;
 	enum text_justification { LL, UL, UR, LR };
 	enum render_type { NORMAL, TEXT, ABSOLUTE, UNDEFINED_RENDER_TYPE };
 
@@ -38,6 +48,7 @@ namespace jep
 	void loadTexture(const char* imagepath, GLuint &textureID);
 	void loadBMP(const char* imagepath, GLuint &textureID);
 	void loadTGA(const char* imagepath, GLuint &textureID);
+	void errorCallback(int error, const char* description);
 
 	const vector<float> extractFloats(const string &s);
 	const vector< vector<int> > extractFaceSequence(const string &s);
@@ -45,6 +56,7 @@ namespace jep
 	const map<string, boost::shared_ptr<material_data> > generateMaterials(const char* file_path, boost::shared_ptr<texture_handler> &textures, const boost::shared_ptr<ogl_context> &context);
 	const DATA_TYPE getDataType(const string &line);
 	const string extractName(const string &line);
+	const bool floatsAreEqual(float first, float second);
 
 	//ogl_context initializes glew, creates a glfw window, generates programs using shaders provided, 
 	//and stores program and texture GLuints to be used by other objects
@@ -75,6 +87,31 @@ namespace jep
 		void enableSpecularMap() { glUniform1i(getShaderGLint("enable_specular_map"), GLint(1)); }
 		void disableSpecularMap() { glUniform1i(getShaderGLint("enable_specular_map"), GLint(0)); }
 
+		void setUniform1i(const char* name, int value) 
+		{ 
+			glUniform1i(getShaderGLint(name), GLint(value)); 
+		}
+
+		void setUniform3fv(const char* name, int count, vec3 value)
+		{ 
+			glUniform3fv(getShaderGLint(name), GLint(count), &value[0]); 
+		}
+
+		void setUniform4fv(const char* name, int count, vec4 value)
+		{
+			glUniform4fv(getShaderGLint(name), GLint(count), &value[0]);
+		}
+
+		void setUniformMatrix4fv(const char* name, int count, bool transpose, mat4 matrix)
+		{
+			glUniformMatrix4fv(getShaderGLint(name), GLint(count), transpose, &matrix[0][0]);
+		}
+
+		void setUniform1f(const char* name, float value)
+		{
+			glUniform1f(getShaderGLint(name), GLfloat(value));
+		}
+
 		const GLuint getProgramID() const { return program_ID; }
 		const float getAspectRatio() const { return aspect_ratio; }
 		const glm::vec4 getBackgroundColor() const { return background_color; }
@@ -82,7 +119,7 @@ namespace jep
 		int getWindowHeight() const { return window_height; }
 		int getWindowWidth() const { return window_width; }
 
-		GLint getShaderGLint(GLchar* name);
+		GLint getShaderGLint(const char* name);
 
 		void setBackgroundColor(glm::vec4 color) { glClearColor(color.x, color.y, color.z, color.w); background_color = color; }
 
@@ -98,7 +135,7 @@ namespace jep
 		std::string window_title;
 		std::vector<std::string> display_errors;
 
-		std::map<GLchar*, boost::shared_ptr<GLint> > glint_map;
+		std::map<string, boost::shared_ptr<GLint> > glint_map;
 
 		GLuint program_ID;
 
@@ -275,6 +312,7 @@ namespace jep
 		void setPrintMovement(bool b) { print_movement = b; }
 
 		void stepCamera(float dist);
+		void elevateCamera(float dist);
 		void twistCamera(float dist);
 		void rotateCamera(float degrees);
 		void tiltCamera(float degrees);
@@ -288,6 +326,7 @@ namespace jep
 		float camera_rotation;
 
 		void move(signed short n);
+		void altitude(signed short n);
 		void rotate(signed short n);
 		void tilt(signed short n);
 		void strafe(signed short n);
@@ -300,6 +339,8 @@ namespace jep
 
 		bool move_forward;
 		bool move_backward;
+		bool altitude_up;
+		bool altitude_down;
 		bool rotate_left;
 		bool rotate_right;
 		bool tilt_up;
@@ -996,6 +1037,23 @@ namespace jep
 	private:
 		vector<string> error_log;
 		map<string, boost::shared_ptr<material_data> > materials;
+	};
+
+	class ogl_context_exception : public std::exception
+	{
+	private:
+		const char* message;
+
+	public:
+		ogl_context_exception(const char* msg)
+		{
+			message = msg;
+		}
+
+		const char* what()
+		{
+			return message;
+		}
 	};
 }
 
